@@ -1,0 +1,36 @@
+// Country data for the phone number selector
+// Each entry: { code, name, dialCode, flag (emoji), pattern (input mask regex) }
+const countries = [
+  { code: 'US', name: 'United States', dialCode: '+1', flag: '🇺🇸', pattern: '(###) ###-####', maxLen: 10 },
+  { code: 'GB', name: 'United Kingdom', dialCode: '+44', flag: '🇬🇧', pattern: '#### ######', maxLen: 10 },
+  { code: 'IN', name: 'India', dialCode: '+91', flag: '🇮🇳', pattern: '##### #####', maxLen: 10 },
+  { code: 'CA', name: 'Canada', dialCode: '+1', flag: '🇨🇦', pattern: '(###) ###-####', maxLen: 10 },
+  { code: 'AU', name: 'Australia', dialCode: '+61', flag: '🇦🇺', pattern: '#### ### ###', maxLen: 9 },
+  { code: 'DE', name: 'Germany', dialCode: '+49', flag: '🇩🇪', pattern: '#### #######', maxLen: 11 },
+  { code: 'FR', name: 'France', dialCode: '+33', flag: '🇫🇷', pattern: '# ## ## ## ##', maxLen: 9 },
+  { code: 'JP', name: 'Japan', dialCode: '+81', flag: '🇯🇵', pattern: '##-####-####', maxLen: 10 },
+  { code: 'BR', name: 'Brazil', dialCode: '+55', flag: '🇧🇷', pattern: '(##) #####-####', maxLen: 11 },
+  { code: 'MX', name: 'Mexico', dialCode: '+52', flag: '🇲🇽', pattern: '## #### ####', maxLen: 10 },
+  { code: 'CN', name: 'China', dialCode: '+86', flag: '🇨🇳', pattern: '### #### ####', maxLen: 11 },
+  { code: 'KR', name: 'South Korea', dialCode: '+82', flag: '🇰🇷', pattern: '##-####-####', maxLen: 10 },
+  { code: 'IT', name: 'Italy', dialCode: '+39', flag: '🇮🇹', pattern: '### ### ####', maxLen: 10 },
+  { code: 'ES', name: 'Spain', dialCode: '+34', flag: '🇪🇸', pattern: '### ## ## ##', maxLen: 9 },
+  { code: 'RU', name: 'Russia', dialCode: '+7', flag: '🇷🇺', pattern: '(###) ###-##-##', maxLen: 10 },
+  { code: 'ZA', name: 'South Africa', dialCode: '+27', flag: '🇿🇦', pattern: '## ### ####', maxLen: 9 },
+  { code: 'NG', name: 'Nigeria', dialCode: '+234', flag: '🇳🇬', pattern: '### ### ####', maxLen: 10 },
+  { code: 'AE', name: 'UAE', dialCode: '+971', flag: '🇦🇪', pattern: '## ### ####', maxLen: 9 },
+  { code: 'SG', name: 'Singapore', dialCode: '+65', flag: '🇸🇬', pattern: '#### ####', maxLen: 8 },
+  { code: 'NZ', name: 'New Zealand', dialCode: '+64', flag: '🇳🇿', pattern: '## ### ####', maxLen: 9 },
+  { code: 'SE', name: 'Sweden', dialCode: '+46', flag: '🇸🇪', pattern: '##-### ## ##', maxLen: 9 },
+  { code: 'NL', name: 'Netherlands', dialCode: '+31', flag: '🇳🇱', pattern: '# ########', maxLen: 9 },
+  { code: 'CH', name: 'Switzerland', dialCode: '+41', flag: '🇨🇭', pattern: '## ### ## ##', maxLen: 9 },
+  { code: 'PK', name: 'Pakistan', dialCode: '+92', flag: '🇵🇰', pattern: '### #######', maxLen: 10 },
+  { code: 'BD', name: 'Bangladesh', dialCode: '+880', flag: '🇧🇩', pattern: '#### ######', maxLen: 10 },
+  { code: 'PH', name: 'Philippines', dialCode: '+63', flag: '🇵🇭', pattern: '### ### ####', maxLen: 10 },
+  { code: 'MY', name: 'Malaysia', dialCode: '+60', flag: '🇲🇾', pattern: '##-### ####', maxLen: 9 },
+  { code: 'ID', name: 'Indonesia', dialCode: '+62', flag: '🇮🇩', pattern: '###-####-####', maxLen: 11 },
+  { code: 'TH', name: 'Thailand', dialCode: '+66', flag: '🇹🇭', pattern: '## ### ####', maxLen: 9 },
+  { code: 'SA', name: 'Saudi Arabia', dialCode: '+966', flag: '🇸🇦', pattern: '## ### ####', maxLen: 9 },
+];
+
+export default countries;
