@@ -1,37 +1,81 @@
 import React from 'react';
-import { CheckCircle2, Circle, ArrowRightCircle } from 'lucide-react';
+import { Check, Lock, ChevronRight } from 'lucide-react';
 
 export default function RoadmapStepper({ roadmap = [], isLoading }) {
   if (isLoading) {
-    return <div className="bg-[#1f2937] p-6 rounded-2xl h-64 animate-pulse border border-gray-800" />;
+    return <div className="bg-[#0a0e1a] p-6 rounded-2xl h-44 animate-pulse border border-[#121829]" />;
   }
 
+  // Custom mapping of roadmap milestones based on DB tasks
+  // For visual richness, we display standard milestones and match statuses with DB goal roadmap
+  const milestones = [
+    { title: "HTML, CSS, JS", index: 0 },
+    { title: "React.js", index: 1 },
+    { title: "Node.js", index: 2 },
+    { title: "Express.js", index: 3 },
+    { title: "MongoDB", index: 4 },
+    { title: "GraphQL", index: 5 }
+  ];
+
+  // Derive status from the goal roadmap completion
+  const completedCount = roadmap.filter(t => t.status === 'completed').length;
+  
+  const getMilestoneStatus = (idx) => {
+    if (idx < completedCount) return 'completed';
+    if (idx === completedCount) return 'current';
+    return 'locked';
+  };
+
   return (
-    <div className="bg-[#1f2937] p-6 rounded-2xl border border-gray-800">
-      <h3 className="text-lg font-bold text-white mb-6">Action Plan</h3>
-      <div className="space-y-6">
-        {roadmap.map((task, idx) => (
-          <div key={task.id} className="flex items-start gap-4 relative">
-            {idx !== roadmap.length - 1 && (
-              <div className="absolute left-3 top-8 bottom-[-24px] w-0.5 bg-gray-700" />
-            )}
-            
-            <div className="mt-0.5 z-10 bg-[#1f2937]">
-              {task.status === 'completed' && <CheckCircle2 className="text-emerald-500" size={24} />}
-              {task.status === 'current' && <ArrowRightCircle className="text-amber-500" size={24} />}
-              {task.status === 'upcoming' && <Circle className="text-gray-600" size={24} />}
-            </div>
-            
-            <div>
-              <p className={`font-medium ${task.status === 'completed' ? 'text-gray-400 line-through' : task.status === 'current' ? 'text-white' : 'text-gray-500'}`}>
-                {task.title}
-              </p>
-              {task.status === 'current' && (
-                <span className="text-xs text-amber-500 font-mono mt-1 block">In Progress</span>
+    <div className="bg-[#0a0e1a] p-6 rounded-2xl border border-[#121829] shadow-sm">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-bold text-white">Your Roadmap</h3>
+        <button className="text-[10px] text-gray-500 font-semibold hover:text-emerald-400 transition flex items-center gap-0.5 cursor-pointer">
+          View Full Roadmap <ChevronRight size={12} />
+        </button>
+      </div>
+
+      <div className="relative flex items-center justify-between overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
+        {milestones.map((mil, idx) => {
+          const status = getMilestoneStatus(idx);
+          const isLast = idx === milestones.length - 1;
+
+          return (
+            <div key={mil.title} className="flex items-center flex-1 min-w-[120px] relative">
+              {/* Connector Line */}
+              {!isLast && (
+                <div className={`absolute top-5 left-10 right-0 h-0.5 z-0 ${idx < completedCount ? 'bg-emerald-500' : 'bg-gray-800'}`} />
               )}
+
+              {/* Step Node */}
+              <div className="flex flex-col items-center z-10 w-full">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-300 relative ${
+                  status === 'completed' 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]' 
+                    : status === 'current'
+                    ? 'bg-amber-500/10 border-amber-500 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse'
+                    : 'bg-[#111625] border-[#1b2237] text-gray-600'
+                }`}>
+                  {status === 'completed' && <Check size={18} strokeWidth={3} />}
+                  {status === 'current' && <span className="text-[9px] font-bold font-mono">75%</span>}
+                  {status === 'locked' && <Lock size={14} />}
+                </div>
+
+                <span className={`text-[10px] font-semibold mt-3 text-center ${
+                  status === 'completed' ? 'text-gray-300' : status === 'current' ? 'text-amber-500' : 'text-gray-500'
+                }`}>
+                  {mil.title}
+                </span>
+
+                <span className={`text-[8px] font-bold uppercase mt-0.5 ${
+                  status === 'completed' ? 'text-emerald-500/80' : status === 'current' ? 'text-amber-500' : 'text-gray-600'
+                }`}>
+                  {status === 'completed' ? 'Completed' : status === 'current' ? 'In Progress' : 'Locked'}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import express from 'express';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import authMiddleware from '../middleware/auth.js';
 
@@ -22,6 +23,114 @@ function signToken(user) {
     { expiresIn: '7d' }
   );
 }
+
+// ==============================
+// Email/Password Signup
+// ==============================
+router.post('/signup', async (req, res) => {
+  try {
+    const { name, email, password, phone } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    if (existingUser) {
+      // If the existing user signed up via Google and has no password,
+      // allow them to add a password to enable manual login
+      if (existingUser.googleId && !existingUser.password) {
+        const salt = await bcrypt.genSalt(12);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        existingUser.password = hashedPassword;
+        if (name.trim()) existingUser.name = name.trim();
+        await existingUser.save();
+
+        const token = signToken(existingUser);
+        res.cookie('token', token, cookieOptions);
+        return res.status(200).json({
+          user: { _id: existingUser._id, name: existingUser.name, email: existingUser.email, picture: existingUser.picture },
+        });
+      }
+      return res.status(409).json({ message: 'User already exists. Please sign in instead.' });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      phone: phone ? phone.trim() : undefined,
+    });
+
+    // Set JWT cookie and return user
+    const token = signToken(user);
+    res.cookie('token', token, cookieOptions);
+    res.status(201).json({
+      user: { _id: user._id, name: user.name, email: user.email, picture: user.picture, phone: user.phone },
+    });
+
+  } catch (error) {
+    console.error('Signup error:', error.message);
+    res.status(500).json({ message: 'Server error during signup' });
+  }
+});
+
+// ==============================
+// Email/Password Login
+// ==============================
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Find user
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: 'No account found with this email. Please sign up first.' });
+    }
+
+    // If user signed up via Google and hasn't set a password yet,
+    // guide them to create one via the Sign Up tab
+    if (!user.password) {
+      return res.status(400).json({
+        message: 'No password set for this account. Please use the Sign Up tab to create a password, or continue with Google.',
+        code: 'NO_PASSWORD_SET',
+      });
+    }
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // Set JWT cookie and return user
+    const token = signToken(user);
+    res.cookie('token', token, cookieOptions);
+    res.json({
+      user: { _id: user._id, name: user.name, email: user.email, picture: user.picture },
+    });
+
+  } catch (error) {
+    console.error('Login error:', error.message);
+    res.status(500).json({ message: 'Server error during login' });
+  }
+});
 
 // ==============================
 // Google OAuth Callback

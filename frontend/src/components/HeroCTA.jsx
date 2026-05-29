@@ -1,65 +1,115 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Edit3 } from 'lucide-react';
+import { Compass } from 'lucide-react';
 
 export default function HeroCTA({ goal, isLoading }) {
   if (isLoading) {
     return (
-      <div className="bg-[#1f2937] p-8 rounded-2xl shadow-lg border border-gray-800 flex flex-col md:flex-row items-center justify-between animate-pulse">
-        <div className="h-32 w-32 bg-gray-700 rounded-full mb-6 md:mb-0" />
-        <div className="h-12 w-48 bg-gray-700 rounded-lg" />
-      </div>
+      <div className="bg-[#0a0e1a] p-6 rounded-2xl border border-[#121829] shadow-sm h-56 animate-pulse" />
     );
   }
 
   const completion = goal?.completionPercentage || 0;
-  const data = [
-    { name: 'Completed', value: completion },
-    { name: 'Remaining', value: 100 - completion }
-  ];
-  
+  const roadmap = goal?.roadmap || [];
+  const completedCount = roadmap.filter(t => t.status === 'completed').length;
+  const inProgressCount = roadmap.filter(t => t.status === 'current').length;
+  const remainingCount = roadmap.filter(t => t.status === 'upcoming').length;
+  const totalCount = roadmap.length || 5;
+
+  // SVG circle calculations
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (completion / 100) * circumference;
+
   return (
-    <div className="bg-[#1f2937] p-8 rounded-2xl shadow-lg border border-gray-800 flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl" />
+    <div className="bg-[#0a0e1a] p-6 rounded-2xl border border-[#121829] shadow-sm flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
+      {/* Deep green background blur glow */}
+      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl" />
       
-      <div className="flex flex-col md:flex-row items-center gap-8 mb-6 md:mb-0 z-10">
-        <div className="relative w-36 h-36">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                innerRadius={50}
-                outerRadius={70}
-                startAngle={90}
-                endAngle={-270}
-                dataKey="value"
-                stroke="none"
-              >
-                <Cell key="cell-0" fill="#10b981" />
-                <Cell key="cell-1" fill="#374151" />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-2xl font-bold text-white font-mono">{completion}%</span>
+      {/* Circular Progress & Info */}
+      <div className="flex flex-col sm:flex-row items-center gap-6 z-10 w-full md:w-auto">
+        {/* SVG Circle Progress */}
+        <div className="relative w-28 h-28 flex-shrink-0">
+          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+            {/* Background circle */}
+            <circle
+              cx="50"
+              cy="50"
+              r={radius}
+              className="stroke-gray-800"
+              strokeWidth="6"
+              fill="transparent"
+            />
+            {/* Active progress circle */}
+            <circle
+              cx="50"
+              cy="50"
+              r={radius}
+              className="stroke-emerald-500"
+              strokeWidth="6"
+              fill="transparent"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+            <span className="text-xl font-bold text-white font-mono leading-none">{completion}%</span>
+            <span className="text-[8px] text-gray-500 font-medium uppercase mt-0.5 tracking-wider">Completed</span>
           </div>
         </div>
-        
-        <div className="text-center md:text-left">
-          <h2 className="text-2xl font-bold text-white mb-2">{goal?.title || "Active Goal"}</h2>
-          <p className="text-gray-400 max-w-md">You're making steady progress. Logging your execution with theory is key to mastery.</p>
+
+        {/* Text & Progress Bars */}
+        <div className="flex-1 text-center sm:text-left">
+          <h2 className="text-lg font-bold text-white tracking-tight">{goal?.title || "Active Goal"}</h2>
+          <p className="text-[11px] text-gray-400 mt-1">You're making steady progress.</p>
+          <p className="text-[10px] text-gray-500 font-semibold mt-2">{completedCount} of {totalCount} modules completed</p>
+          
+          {/* Horizontal Progress Bar */}
+          <div className="w-full sm:w-64 bg-[#111625] h-1.5 rounded-full overflow-hidden mt-2 border border-[#1b2237]">
+            <div 
+              className="bg-emerald-500 h-full rounded-full transition-all duration-700" 
+              style={{ width: `${completion}%` }}
+            />
+          </div>
+
+          {/* Breakdown counts */}
+          <div className="flex items-center justify-center sm:justify-start gap-4 mt-4">
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Completed: <strong>{completedCount}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span>In Progress: <strong>{inProgressCount}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span>Remaining: <strong>{remainingCount}</strong></span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <Link 
-        to="/journal/new"
-        className="z-10 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-bold py-4 px-8 rounded-xl transition shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center gap-2 animate-pulse"
-      >
-        <Edit3 size={20} />
-        Add Today's Journal
-      </Link>
+      {/* Button & Rocket graphic */}
+      <div className="flex flex-col items-center md:items-end gap-3 mt-6 md:mt-0 z-10 w-full md:w-auto">
+        {/* Floating Rocket SVG graphic */}
+        <div className="hidden md:block text-indigo-400/20 absolute right-6 top-6 animate-bounce" style={{ animationDuration: '4s' }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4.5 16.5c-1.5 1.25-2.5 3.5-2.5 3.5s2.25-1 3.5-2.5" />
+            <path d="M12 2C6.5 2 2 6.5 2 12c0 2.5 1 4.5 2.5 6l6-6L18 4.5 22 2l-2.5 4L12 12l-6 6c1.5 1.5 3.5 2.5 6 2.5 5.5 0 10-4.5 10-10C22 6.5 17.5 2 12 2z" />
+          </svg>
+        </div>
+
+        <Link 
+          to="/dashboard/roadmap"
+          className="bg-[#111625] hover:bg-[#1c2237] text-white border border-[#1b2237] font-semibold py-2 px-4 rounded-xl text-xs transition duration-200 flex items-center gap-1.5 cursor-pointer shadow-md"
+        >
+          <span>View Roadmap</span>
+          <Compass size={14} />
+        </Link>
+      </div>
     </div>
   );
 }
