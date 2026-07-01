@@ -30,7 +30,13 @@ const authSlice = createSlice({
     isAuthenticated: false,
     loading: true, // starts true — we check auth on app load
   },
-  reducers: {},
+  reducers: {
+    updateUser: (state, action) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    }
+  },
   extraReducers: (builder) => {
     builder
       // fetchCurrentUser
@@ -55,4 +61,5 @@ const authSlice = createSlice({
   },
 });
 
+export const { updateUser } = authSlice.actions;
 export default authSlice.reducer;

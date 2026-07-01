@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js';
 import journalRoutes from './routes/journal.js';
 import dashboardRoutes from './routes/dashboard.js';
 import goalsRoutes from './routes/goals.js';
+import focusSessionRoutes from './routes/focusSession.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/journal', journalRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/goals', goalsRoutes);
+app.use('/api/focus-session', focusSessionRoutes);
 
 // ── Health Check ──
 app.get('/api/health', (req, res) => {

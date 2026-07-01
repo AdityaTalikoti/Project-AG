@@ -182,6 +182,28 @@ router.get('/google/callback', async (req, res) => {
 });
 
 // ==============================
+// Update daily target (protected)
+// ==============================
+router.put('/daily-target', authMiddleware, async (req, res) => {
+  try {
+    const { dailyTarget } = req.body;
+    if (dailyTarget === undefined || typeof dailyTarget !== 'number' || dailyTarget <= 0) {
+      return res.status(400).json({ message: 'Invalid daily target. Must be a positive number of minutes.' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.dailyTarget = dailyTarget;
+    await user.save();
+
+    res.json({ success: true, message: 'Daily target updated successfully', user });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ==============================
 // Get current user (protected)
 // ==============================
 router.get('/me', authMiddleware, async (req, res) => {

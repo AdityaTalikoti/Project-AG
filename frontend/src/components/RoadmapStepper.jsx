@@ -6,26 +6,6 @@ export default function RoadmapStepper({ roadmap = [], isLoading }) {
     return <div className="bg-[#0a0e1a] p-6 rounded-2xl h-44 animate-pulse border border-[#121829]" />;
   }
 
-  // Custom mapping of roadmap milestones based on DB tasks
-  // For visual richness, we display standard milestones and match statuses with DB goal roadmap
-  const milestones = [
-    { title: "HTML, CSS, JS", index: 0 },
-    { title: "React.js", index: 1 },
-    { title: "Node.js", index: 2 },
-    { title: "Express.js", index: 3 },
-    { title: "MongoDB", index: 4 },
-    { title: "GraphQL", index: 5 }
-  ];
-
-  // Derive status from the goal roadmap completion
-  const completedCount = roadmap.filter(t => t.status === 'completed').length;
-  
-  const getMilestoneStatus = (idx) => {
-    if (idx < completedCount) return 'completed';
-    if (idx === completedCount) return 'current';
-    return 'locked';
-  };
-
   return (
     <div className="bg-[#0a0e1a] p-6 rounded-2xl border border-[#121829] shadow-sm">
       <div className="flex justify-between items-center mb-6">
@@ -35,48 +15,54 @@ export default function RoadmapStepper({ roadmap = [], isLoading }) {
         </button>
       </div>
 
-      <div className="relative flex items-center justify-between overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
-        {milestones.map((mil, idx) => {
-          const status = getMilestoneStatus(idx);
-          const isLast = idx === milestones.length - 1;
+      {roadmap.length === 0 ? (
+        <div className="text-center py-6 text-xs text-gray-500 border border-dashed border-gray-800 rounded-xl">
+          No active goal roadmap found. Create a goal to start tracking milestones!
+        </div>
+      ) : (
+        <div className="relative flex items-center justify-between overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
+          {roadmap.map((mil, idx) => {
+            const status = mil.status; // 'completed', 'current', 'upcoming'
+            const isLast = idx === roadmap.length - 1;
 
-          return (
-            <div key={mil.title} className="flex items-center flex-1 min-w-[120px] relative">
-              {/* Connector Line */}
-              {!isLast && (
-                <div className={`absolute top-5 left-10 right-0 h-0.5 z-0 ${idx < completedCount ? 'bg-emerald-500' : 'bg-gray-800'}`} />
-              )}
+            return (
+              <div key={mil.id || mil.title} className="flex items-center flex-1 min-w-[120px] relative">
+                {/* Connector Line */}
+                {!isLast && (
+                  <div className={`absolute top-5 left-10 right-0 h-0.5 z-0 ${status === 'completed' ? 'bg-emerald-500' : 'bg-gray-800'}`} />
+                )}
 
-              {/* Step Node */}
-              <div className="flex flex-col items-center z-10 w-full">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-300 relative ${
-                  status === 'completed' 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]' 
-                    : status === 'current'
-                    ? 'bg-amber-500/10 border-amber-500 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse'
-                    : 'bg-[#111625] border-[#1b2237] text-gray-600'
-                }`}>
-                  {status === 'completed' && <Check size={18} strokeWidth={3} />}
-                  {status === 'current' && <span className="text-[9px] font-bold font-mono">75%</span>}
-                  {status === 'locked' && <Lock size={14} />}
+                {/* Step Node */}
+                <div className="flex flex-col items-center z-10 w-full">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-300 relative ${
+                    status === 'completed' 
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]' 
+                      : status === 'current'
+                      ? 'bg-amber-500/10 border-amber-500 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse'
+                      : 'bg-[#111625] border-[#1b2237] text-gray-600'
+                  }`}>
+                    {status === 'completed' && <Check size={18} strokeWidth={3} />}
+                    {status === 'current' && <span className="text-[9px] font-bold font-mono">Active</span>}
+                    {status === 'upcoming' && <Lock size={14} />}
+                  </div>
+
+                  <span className={`text-[10px] font-semibold mt-3 text-center truncate px-2 w-full ${
+                    status === 'completed' ? 'text-gray-300' : status === 'current' ? 'text-amber-500' : 'text-gray-500'
+                  }`} title={mil.title}>
+                    {mil.title}
+                  </span>
+
+                  <span className={`text-[8px] font-bold uppercase mt-0.5 ${
+                    status === 'completed' ? 'text-emerald-500/80' : status === 'current' ? 'text-amber-500' : 'text-gray-600'
+                  }`}>
+                    {status === 'completed' ? 'Completed' : status === 'current' ? 'In Progress' : 'Locked'}
+                  </span>
                 </div>
-
-                <span className={`text-[10px] font-semibold mt-3 text-center ${
-                  status === 'completed' ? 'text-gray-300' : status === 'current' ? 'text-amber-500' : 'text-gray-500'
-                }`}>
-                  {mil.title}
-                </span>
-
-                <span className={`text-[8px] font-bold uppercase mt-0.5 ${
-                  status === 'completed' ? 'text-emerald-500/80' : status === 'current' ? 'text-amber-500' : 'text-gray-600'
-                }`}>
-                  {status === 'completed' ? 'Completed' : status === 'current' ? 'In Progress' : 'Locked'}
-                </span>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

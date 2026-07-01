@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import JournalPage from './pages/JournalPage';
 import AuthPage from './pages/AuthPage';
+import FocusTimerPage from './pages/FocusTimerPage';
 
 function App() {
   const dispatch = useDispatch();
@@ -33,6 +34,12 @@ function App() {
           <Route index element={<Home />} />
           <Route path="journal/new" element={<JournalPage />} />
         </Route>
+
+        <Route path="/dashboard/focus" element={
+          <ProtectedRoute>
+            <FocusTimerPage />
+          </ProtectedRoute>
+        } />
 
       </Routes>
     </BrowserRouter>
