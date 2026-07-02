@@ -12,3 +12,146 @@ body {
   color: #f3f4f6;
   font-family: 'Inter', system-ui, sans-serif;
 }
+
+/* Global Transition for Theme Switching */
+body, aside, header, main, div, span, button, a, input, textarea {
+  transition: background-color 0.25s ease-in-out, border-color 0.25s ease-in-out, color 0.25s ease-in-out;
+}
+
+/* ── Light Mode Color Theme Overrides ── */
+
+html.light {
+  color-scheme: light;
+}
+
+html.light body {
+  background-color: #f3f4f6 !important;
+  color: #1f2937 !important;
+}
+
+/* Core backgrounds override */
+html.light .bg-\[\#080c14\] {
+  background-color: #f3f4f6 !important;
+}
+
+html.light .bg-\[\#0a0e1a\] {
+  background-color: #ffffff !important;
+}
+
+html.light .bg-\[\#0a0e1a\]\/80 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+html.light .bg-\[\#111625\] {
+  background-color: #ffffff !important;
+}
+
+html.light .bg-dark-panel {
+  background-color: #ffffff !important;
+}
+
+/* Border overrides */
+html.light .border-\[\#121829\] {
+  border-color: #e5e7eb !important;
+}
+
+html.light .border-\[\#1b2237\] {
+  border-color: #e5e7eb !important;
+}
+
+html.light .border-gray-800 {
+  border-color: #e5e7eb !important;
+}
+
+/* Text color overrides */
+html.light .text-white {
+  color: #111827 !important;
+}
+
+html.light .text-gray-200 {
+  color: #374151 !important;
+}
+
+html.light .text-gray-300 {
+  color: #374151 !important;
+}
+
+html.light .text-gray-400 {
+  color: #4b5563 !important;
+}
+
+html.light .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+html.light .text-emerald-400 {
+  color: #047857 !important;
+}
+
+/* Maintain original styles on colored widgets, pills and brand elements */
+html.light .bg-purple-600,
+html.light .bg-indigo-600,
+html.light .bg-emerald-500,
+html.light .bg-emerald-600,
+html.light .bg-rose-500,
+html.light .bg-violet-600,
+html.light .bg-gradient-to-r,
+html.light .bg-gradient-to-tr,
+html.light .bg-emerald-500\/10,
+html.light .bg-purple-500\/10 {
+  color: inherit;
+}
+
+/* Fix specific button texts */
+html.light button.text-white,
+html.light a.bg-gradient-to-r,
+html.light button.bg-gradient-to-r,
+html.light .auth-submit,
+html.light .bg-violet-600 button {
+  color: #ffffff !important;
+}
+
+/* Layout Sidebar overrides */
+html.light aside {
+  background-color: #ffffff !important;
+  border-right-color: #e5e7eb !important;
+}
+
+html.light header {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border-bottom-color: #e5e7eb !important;
+}
+
+/* Sidebar navigation item hover and active states */
+html.light .hover\:bg-gray-900\/50:hover {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+html.light .bg-emerald-500\/10 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #047857 !important;
+}
+
+/* SVG and Recharts charts */
+html.light .recharts-cartesian-grid-horizontal line,
+html.light .recharts-cartesian-grid-vertical line {
+  stroke: #e5e7eb !important;
+}
+
+html.light .recharts-text {
+  fill: #4b5563 !important;
+}
+
+/* Inputs and textareas */
+html.light input,
+html.light textarea {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #111827 !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #9ca3af !important;
+}

@@ -90,7 +90,7 @@ router.post('/signup', async (req, res) => {
 // ==============================
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, remember } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
@@ -121,7 +121,16 @@ router.post('/login', async (req, res) => {
 
     // Set JWT cookie and return user
     const token = signToken(user);
-    res.cookie('token', token, cookieOptions);
+    
+    // Customize cookie options based on remember checkbox
+    const loginCookieOptions = { ...cookieOptions };
+    if (!remember) {
+      delete loginCookieOptions.maxAge;
+    } else {
+      loginCookieOptions.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+    }
+
+    res.cookie('token', token, loginCookieOptions);
     res.json({
       user: { _id: user._id, name: user.name, email: user.email, picture: user.picture },
     });

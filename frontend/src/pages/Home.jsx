@@ -32,6 +32,10 @@ export default function Home() {
   const isLoading = statsLoading || goalLoading;
   const stats = statsData?.data || {};
   const goal = goalData?.data || {};
+  const currentWeekDots = stats.currentWeekDots || [
+    { label: 'M', active: false }, { label: 'T', active: false }, { label: 'W', active: false },
+    { label: 'T', active: false }, { label: 'F', active: false }, { label: 'S', active: false }, { label: 'S', active: false }
+  ];
 
   const studentFirstName = user?.name ? user.name.split(' ')[0] : 'Scholar';
 
@@ -75,57 +79,87 @@ export default function Home() {
 
 
       {/* ── Top Metrics Grid ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Streak */}
-        <div className="bg-[#0a0e1a] p-4 rounded-2xl border border-[#121829] shadow-sm flex items-center gap-4">
-          <div className="bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 text-emerald-400">
-            <Flame size={20} className="animate-pulse" />
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-400 font-semibold block uppercase tracking-wider">Streak</span>
-            <span className="text-lg font-bold text-white block mt-0.5">{stats.streak || 0} Days</span>
-            <span className="text-[9px] text-gray-500 block">Best: {stats.bestStreak || 0} days</span>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Focus Hours */}
-        <div className="bg-[#0a0e1a] p-4 rounded-2xl border border-[#121829] shadow-sm flex items-center gap-4">
-          <div className="bg-purple-500/10 p-2.5 rounded-xl border border-purple-500/20 text-purple-400">
-            <Clock size={20} />
+        <div className="bg-[#0a0e1a] p-4 rounded-2xl border border-[#121829] shadow-sm flex flex-col justify-between min-h-[120px]">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Focus Hours</span>
+            <div className="bg-purple-500/10 p-2 rounded-lg border border-purple-500/20 text-purple-400">
+              <Clock size={16} />
+            </div>
           </div>
           <div>
-            <span className="text-[10px] text-gray-400 font-semibold block uppercase tracking-wider">Focus Hours</span>
-            <span className="text-lg font-bold text-white block mt-0.5">
+            <span className="text-xl font-bold text-white block mt-1.5">
               {formatFocusTime(stats.focusHours?.current)}
+            </span>
+            <span className="text-[9px] text-gray-500 block mt-1">
+              Target: {user?.dailyTarget ? `${user.dailyTarget} min` : 'Not set'}
             </span>
           </div>
         </div>
 
         {/* Tasks Completed */}
-        <div className="bg-[#0a0e1a] p-4 rounded-2xl border border-[#121829] shadow-sm flex items-center gap-4">
-          <div className="bg-blue-500/10 p-2.5 rounded-xl border border-blue-500/20 text-blue-400">
-            <CheckCircle size={20} />
+        <div className="bg-[#0a0e1a] p-4 rounded-2xl border border-[#121829] shadow-sm flex flex-col justify-between min-h-[120px]">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Tasks</span>
+            <div className="bg-blue-500/10 p-2 rounded-lg border border-blue-500/20 text-blue-400">
+              <CheckCircle size={16} />
+            </div>
           </div>
           <div>
-            <span className="text-[10px] text-gray-400 font-semibold block uppercase tracking-wider">Tasks</span>
-            <span className="text-lg font-bold text-white block mt-0.5">{stats.tasksCompleted?.current || 0} Completed</span>
-            <span className={`text-[9px] font-medium block ${stats.tasksCompleted?.trend >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <span className="text-xl font-bold text-white block mt-1.5">
+              {stats.tasksCompleted?.current || 0} Completed
+            </span>
+            <span className={`text-[9px] font-medium block mt-1 ${stats.tasksCompleted?.trend >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
               {stats.tasksCompleted?.trend >= 0 ? '↑' : '↓'} {Math.abs(stats.tasksCompleted?.trend || 0)}% this week
             </span>
           </div>
         </div>
 
         {/* Consistency */}
-        <div className="bg-[#0a0e1a] p-4 rounded-2xl border border-[#121829] shadow-sm flex items-center gap-4">
-          <div className="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20 text-amber-400">
-            <Zap size={20} />
+        <div className="bg-[#0a0e1a] p-4 rounded-2xl border border-[#121829] shadow-sm flex flex-col justify-between min-h-[120px]">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Consistency</span>
+            <div className="bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 text-amber-400">
+              <Zap size={16} />
+            </div>
           </div>
           <div>
-            <span className="text-[10px] text-gray-400 font-semibold block uppercase tracking-wider">Consistency</span>
-            <span className="text-lg font-bold text-white block mt-0.5">{stats.consistency?.score || 0}%</span>
-            <span className={`text-[9px] font-medium block ${getConsistencyColor(stats.consistency?.label)}`}>
+            <span className="text-xl font-bold text-white block mt-1.5">
+              {stats.consistency?.score || 0}%
+            </span>
+            <span className={`text-[9px] font-semibold block mt-1 ${getConsistencyColor(stats.consistency?.label)}`}>
               {stats.consistency?.label || 'Needs Practice'}
             </span>
+          </div>
+        </div>
+
+        {/* Streak & Weekly Progress */}
+        <div className="bg-[#0a0e1a] p-4 rounded-2xl border border-[#121829] shadow-sm flex flex-col justify-between min-h-[120px]">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Streak</span>
+            <div className="bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20 text-emerald-400">
+              <Flame size={16} className="animate-pulse" />
+            </div>
+          </div>
+          <div className="flex items-end justify-between mt-1.5">
+            <div>
+              <span className="text-xl font-bold text-white block">
+                {stats.streak || 0} Days
+              </span>
+              <span className="text-[9px] text-gray-500 block mt-0.5">
+                Best: {stats.bestStreak || 0} days
+              </span>
+            </div>
+            {/* Weekly dots grid inside the card */}
+            <div className="flex gap-1 mb-0.5">
+              {currentWeekDots.map((dot, idx) => (
+                <div key={idx} className="flex flex-col items-center gap-0.5">
+                  <div className={`w-2.5 h-2.5 rounded-full ${dot.active ? 'bg-emerald-500 ring-1 ring-emerald-500/20' : 'bg-gray-800'}`} />
+                  <span className="text-[8px] text-gray-500 font-medium">{dot.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

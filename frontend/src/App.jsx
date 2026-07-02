@@ -8,6 +8,7 @@ import Home from './pages/Home';
 import JournalPage from './pages/JournalPage';
 import AuthPage from './pages/AuthPage';
 import FocusTimerPage from './pages/FocusTimerPage';
+import ComingSoonPage from './pages/ComingSoonPage';
 
 function App() {
   const dispatch = useDispatch();
@@ -33,6 +34,16 @@ function App() {
         }>
           <Route index element={<Home />} />
           <Route path="journal/new" element={<JournalPage />} />
+          <Route path="roadmap" element={<ComingSoonPage title="Roadmap" />} />
+          <Route path="tasks" element={<ComingSoonPage title="Tasks" />} />
+          <Route path="flashcards" element={<ComingSoonPage title="Flashcards" />} />
+          <Route path="notes" element={<ComingSoonPage title="Notes" />} />
+          <Route path="progress" element={<ComingSoonPage title="Progress" />} />
+          <Route path="analytics" element={<ComingSoonPage title="Analytics" />} />
+          <Route path="achievements" element={<ComingSoonPage title="Achievements" />} />
+          <Route path="peers" element={<ComingSoonPage title="Peers" />} />
+          <Route path="mentor" element={<ComingSoonPage title="Mentor Portal" />} />
+          <Route path="settings" element={<ComingSoonPage title="Settings" />} />
         </Route>
 
         <Route path="/dashboard/focus" element={
