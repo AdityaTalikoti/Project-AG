@@ -115,6 +115,20 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['Event'],
     }),
+    deleteActiveRoadmap: builder.mutation({
+      query: () => ({
+        url: 'roadmaps/active',
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Event', 'DashboardStats'],
+    }),
+    archiveActiveRoadmap: builder.mutation({
+      query: () => ({
+        url: 'roadmaps/archive',
+        method: 'POST',
+      }),
+      invalidatesTags: ['Event', 'DashboardStats'],
+    }),
   }),
 });
 
@@ -138,5 +152,9 @@ export const {
 
   // Roadmap Sync Hooks
   useGetRoadmapSyncStatusQuery,
-  useSyncRoadmapMutation
+  useSyncRoadmapMutation,
+  
+  // Roadmap Delete & Archive Mutations
+  useDeleteActiveRoadmapMutation,
+  useArchiveActiveRoadmapMutation
 } = apiSlice;

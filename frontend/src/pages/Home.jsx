@@ -7,7 +7,7 @@ import WeeklyProgress from '../components/WeeklyProgress';
 import Widgets from '../components/Widgets';
 import QuickCreateEventModal from '../components/QuickCreateEventModal';
 import { 
-  Flame, Clock, CheckCircle, Zap, Play, Compass, Target,
+  Flame, Clock, CheckCircle, Zap, Play,
   Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search, 
   Filter, Timer, AlertCircle, Plus, Check, ArrowUpRight 
 } from 'lucide-react';
