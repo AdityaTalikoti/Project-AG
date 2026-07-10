@@ -34,7 +34,7 @@ export default function Layout() {
   };
 
   const stats = statsRes?.data || {};
-  const levelInfo = stats.levelInfo || { level: 12, name: "Full Stack Explorer", xp: 2450, maxXp: 3000 };
+  const levelInfo = stats.levelInfo || { level: 1, name: "Loading...", xp: 0, maxXp: 1000 };
   const currentWeekDots = stats.currentWeekDots || [
     { label: 'M', active: true }, { label: 'T', active: true }, { label: 'W', active: true },
     { label: 'T', active: true }, { label: 'F', active: false }, { label: 'S', active: false }, { label: 'S', active: false }
@@ -53,10 +53,6 @@ export default function Layout() {
     { name: 'Flashcards', path: '/dashboard/flashcards', icon: Layers },
     { name: 'Notes', path: '/dashboard/notes', icon: FileText },
     { name: 'Progress', path: '/dashboard/progress', icon: BarChart2 },
-    { name: 'Analytics', path: '/dashboard/analytics', icon: LineChart },
-    { name: 'Achievements', path: '/dashboard/achievements', icon: Award },
-    { name: 'Peers', path: '/dashboard/peers', icon: Users },
-    { name: 'Mentor Portal', path: '/dashboard/mentor', icon: Activity },
     { name: 'Settings', path: '/dashboard/settings', icon: Settings },
   ];
 

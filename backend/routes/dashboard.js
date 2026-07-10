@@ -4,6 +4,7 @@ import Journal from '../models/Journal.js';
 import Goal from '../models/Goal.js';
 import FocusSession from '../models/FocusSession.js';
 import User from '../models/User.js';
+import Roadmap from '../models/Roadmap.js';
 
 function getLocalDateStr(date, timezone) {
   try {
@@ -340,13 +341,26 @@ router.get('/stats', authMiddleware, async (req, res) => {
       }
     });
 
-    const totalXp = journals.length * 100 + (journals.filter(j => j.aiFeedback?.match).length * 50) + focusSessionXp;
+    const activeRoadmap = await Roadmap.findOne({ studentId, active: true });
+    let roadmapXp = 0;
+    if (activeRoadmap) {
+      activeRoadmap.modules.forEach(m => {
+        m.tasks.forEach(t => {
+          if (t.completed) {
+            roadmapXp += (t.xpReward || 50);
+          }
+        });
+      });
+    }
+
+    const totalXp = journals.length * 100 + (journals.filter(j => j.aiFeedback?.match).length * 50) + focusSessionXp + roadmapXp;
     const level = Math.floor(totalXp / 1000) + 1;
     const xp = totalXp % 1000;
     const maxXp = 1000;
+    const roleName = activeRoadmap ? activeRoadmap.title : "Student";
     const levelInfo = {
       level,
-      name: level >= 5 ? "Senior Scholar" : (level >= 3 ? "Knowledge Seeker" : "Full Stack Explorer"),
+      name: level >= 5 ? `Senior ${roleName}` : (level >= 3 ? `${roleName} Scholar` : `${roleName} Explorer`),
       xp,
       maxXp
     };
@@ -354,17 +368,32 @@ router.get('/stats', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       data: {
-        streak,
-        bestStreak,
         focusHours: { current: currentFocusHours, trend: focusHoursTrend },
         tasksCompleted: { current: totalTasksCompleted, trend: tasksCompletedTrend },
-        consistency: { score: consistencyScore, label: consistencyLabel },
+        streak,
+        bestStreak,
+        consistency: {
+          score: consistencyScore,
+          label: consistencyLabel
+        },
         weeklyProgress,
+        heatmap,
+        currentWeekDots,
         upcomingTasks,
         achievements,
         levelInfo,
-        currentWeekDots,
-        aiInsight
+        aiInsight,
+        hasActiveRoadmap: !!activeRoadmap,
+        activeRoadmap: activeRoadmap ? {
+          id: activeRoadmap._id,
+          title: activeRoadmap.title,
+          completionPercentage: activeRoadmap.completionPercentage,
+          category: activeRoadmap.category,
+          activeModuleName: activeRoadmap.modules.find(m => m.status === 'in-progress')?.title || 'All Modules Completed',
+          completedModulesCount: activeRoadmap.modules.filter(m => m.status === 'completed').length,
+          inProgressModulesCount: activeRoadmap.modules.filter(m => m.status === 'in-progress').length,
+          totalModulesCount: activeRoadmap.modules.length
+        } : null
       }
     });
   } catch (error) {
