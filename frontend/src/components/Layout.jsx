@@ -49,6 +49,7 @@ export default function Layout() {
     { name: 'Dashboard', path: '/dashboard', icon: Home },
     { name: 'Journal', path: '/dashboard/journal/new', icon: BookOpen },
     { name: 'Roadmap', path: '/dashboard/roadmap', icon: Compass },
+    { name: 'Calendar', path: '/dashboard/calendar', icon: Calendar },
     { name: 'Tasks', path: '/dashboard/tasks', icon: CheckSquare },
     { name: 'Flashcards', path: '/dashboard/flashcards', icon: Layers },
     { name: 'Notes', path: '/dashboard/notes', icon: FileText },

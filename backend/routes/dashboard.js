@@ -228,39 +228,44 @@ router.get('/stats', authMiddleware, async (req, res) => {
 
     // Consistency score (Forgiving Health Bar)
     let consistencyScore = 100;
-    const registrationDateStr = getLocalDateStr(new Date(user.createdAt), clientTimezone);
     
-    // Loop through each day from user registration to today (capped at last 30 days)
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const startDateStr = getLocalDateStr(thirtyDaysAgo, clientTimezone);
-    const startFromStr = registrationDateStr > startDateStr ? registrationDateStr : startDateStr;
-    
-    const dates = [];
-    let current = new Date(startFromStr + 'T00:00:00');
-    const end = new Date(todayStr + 'T00:00:00');
-    
-    while (current <= end) {
-      dates.push(getLocalDateStr(current, clientTimezone));
-      current.setDate(current.getDate() + 1);
-    }
-    
-    dates.forEach(dateStr => {
-      const journalMin = journalMap[dateStr] ? 180 : 0;
-      const actualFocusMin = (focusSessionMap[dateStr] || 0) * 60;
-      const totalMin = journalMin + actualFocusMin;
+    if (journals.length === 0 && focusSessions.length === 0) {
+      consistencyScore = 0;
+    } else {
+      const registrationDateStr = getLocalDateStr(new Date(user.createdAt), clientTimezone);
       
-      const isToday = (dateStr === todayStr);
+      // Loop through each day from user registration to today (capped at last 30 days)
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const startDateStr = getLocalDateStr(thirtyDaysAgo, clientTimezone);
+      const startFromStr = registrationDateStr > startDateStr ? registrationDateStr : startDateStr;
       
-      if (totalMin >= dailyTarget) {
-        consistencyScore = Math.min(100, consistencyScore + 1);
-      } else if (!isToday) {
-        if (totalMin > 0) {
-          consistencyScore = Math.max(0, consistencyScore - 1);
-        } else {
-          consistencyScore = Math.max(0, consistencyScore - 2);
-        }
+      const dates = [];
+      let current = new Date(startFromStr + 'T00:00:00');
+      const end = new Date(todayStr + 'T00:00:00');
+      
+      while (current <= end) {
+        dates.push(getLocalDateStr(current, clientTimezone));
+        current.setDate(current.getDate() + 1);
       }
-    });
+      
+      dates.forEach(dateStr => {
+        const journalMin = journalMap[dateStr] ? 180 : 0;
+        const actualFocusMin = (focusSessionMap[dateStr] || 0) * 60;
+        const totalMin = journalMin + actualFocusMin;
+        
+        const isToday = (dateStr === todayStr);
+        
+        if (totalMin >= dailyTarget) {
+          consistencyScore = Math.min(100, consistencyScore + 1);
+        } else if (!isToday) {
+          if (totalMin > 0) {
+            consistencyScore = Math.max(0, consistencyScore - 1);
+          } else {
+            consistencyScore = Math.max(0, consistencyScore - 2);
+          }
+        }
+      });
+    }
 
     let consistencyLabel = 'Needs Practice';
     if (consistencyScore >= 80) {
