@@ -6,14 +6,18 @@ export const apiSlice = createApi({
     baseUrl: '/api/',
     credentials: 'include'
   }),
-  tagTypes: ['Journal'],
+  tagTypes: ['Journal', 'DashboardStats'],
   endpoints: (builder) => ({
     getJournals: builder.query({
       query: (studentId) => `journal/${studentId}`,
       providesTags: ['Journal'],
     }),
     getDashboardStats: builder.query({
-      query: () => `dashboard/stats`,
+      query: () => {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return `dashboard/stats?timezone=${encodeURIComponent(timezone)}`;
+      },
+      providesTags: ['DashboardStats'],
     }),
     getActiveGoal: builder.query({
       query: () => `goals/active`,
@@ -24,9 +28,35 @@ export const apiSlice = createApi({
         method: 'POST',
         body: journalData,
       }),
-      invalidatesTags: ['Journal'],
+      invalidatesTags: ['Journal', 'DashboardStats'],
+    }),
+    addFocusSession: builder.mutation({
+      query: (sessionData) => {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return {
+          url: 'focus-session',
+          method: 'POST',
+          body: { ...sessionData, timezone },
+        };
+      },
+      invalidatesTags: ['DashboardStats'],
+    }),
+    updateDailyTarget: builder.mutation({
+      query: (targetData) => ({
+        url: 'auth/daily-target',
+        method: 'PUT',
+        body: targetData,
+      }),
+      invalidatesTags: ['DashboardStats'],
     }),
   }),
 });
 
-export const { useGetJournalsQuery, useGetDashboardStatsQuery, useGetActiveGoalQuery, useAddJournalMutation } = apiSlice;
+export const { 
+  useGetJournalsQuery, 
+  useGetDashboardStatsQuery, 
+  useGetActiveGoalQuery, 
+  useAddJournalMutation,
+  useAddFocusSessionMutation,
+  useUpdateDailyTargetMutation
+} = apiSlice;

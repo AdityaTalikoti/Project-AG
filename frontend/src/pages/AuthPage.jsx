@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { fetchCurrentUser } from '../store/authSlice';
 import PasswordInput from '../components/auth/PasswordInput';
 import PhoneInput from '../components/auth/PhoneInput';
@@ -179,7 +179,7 @@ function SignInView({ onSwitch, onForgot, onNeedPassword }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email: form.email.trim(), password: form.password }),
+        body: JSON.stringify({ email: form.email.trim(), password: form.password, remember: form.remember }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -302,14 +302,47 @@ function ForgotView({ onBack }) {
 //  MAIN AUTH PAGE
 // ═══════════════════════════════════
 export default function AuthPage() {
+  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
   const [view, setView] = useState('signin'); // 'signin' | 'signup' | 'forgot'
   const [prefillEmail, setPrefillEmail] = useState('');
+
+  React.useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   // Called when a Google-only user tries manual login — switch to signup with their email
   const handleNeedPassword = (email) => {
     setPrefillEmail(email);
     setView('signup');
   };
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#0a0e1a',
+      }}>
+        <div style={{
+          width: 40, height: 40,
+          border: '3px solid rgba(99,102,241,0.2)',
+          borderTopColor: '#6366f1',
+          borderRadius: '50%',
+          animation: 'spin .6s linear infinite',
+        }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="auth-page">
