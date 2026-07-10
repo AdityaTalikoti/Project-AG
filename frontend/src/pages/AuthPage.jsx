@@ -91,6 +91,7 @@ function SignUpView({ onSwitch, initialEmail = '' }) {
           name: `${form.first.trim()} ${form.last.trim()}`,
           email: form.email.trim(),
           password: form.password,
+          phone: form.phone,
         }),
       });
       const data = await res.json();

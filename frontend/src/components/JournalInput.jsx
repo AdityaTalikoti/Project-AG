@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useAddJournalMutation } from '../store/apiSlice';
 import { Send, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function JournalInput() {
+  const { user } = useSelector((state) => state.auth);
   const [task, setTask] = useState('');
   const [idea, setIdea] = useState('');
   const [addJournal, { isLoading }] = useAddJournalMutation();
@@ -10,9 +12,10 @@ export default function JournalInput() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!user?._id) return;
     try {
       const result = await addJournal({
-        studentId: '60d0fe4f5311236168a109ca', // mock ID
+        studentId: user._id,
         task,
         idea
       }).unwrap();

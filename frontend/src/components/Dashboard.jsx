@@ -1,9 +1,11 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 import { useGetJournalsQuery } from '../store/apiSlice';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis } from 'recharts';
 
 export default function Dashboard() {
-  const { data: response, isLoading } = useGetJournalsQuery('60d0fe4f5311236168a109ca');
+  const { user } = useSelector((state) => state.auth);
+  const { data: response, isLoading } = useGetJournalsQuery(user?._id, { skip: !user?._id });
   
   if (isLoading) return <div className="text-gray-400 animate-pulse">Loading dashboard...</div>;
 
