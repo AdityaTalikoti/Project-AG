@@ -7,7 +7,6 @@ import WeeklyProgress from '../components/WeeklyProgress';
 import RoadmapStepper from '../components/RoadmapStepper';
 import QuickActions from '../components/QuickActions';
 import Widgets from '../components/Widgets';
-import AchievementsList from '../components/AchievementsList';
 import { Flame, Clock, CheckCircle, Zap, Play, Compass, Target } from 'lucide-react';
 
 const formatFocusTime = (hours) => {
@@ -180,7 +179,6 @@ export default function Home() {
             aiInsight={stats.aiInsight}
             isLoading={isLoading} 
           />
-          <AchievementsList achievements={stats.achievements} isLoading={isLoading} />
         </div>
       </div>
     </div>
