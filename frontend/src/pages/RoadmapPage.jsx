@@ -1,11 +1,47 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Compass, CheckCircle2, Lock, ArrowLeft, Target, Award, Clock, Trash2, Trophy } from 'lucide-react';
+import { Compass, CheckCircle2, Lock, ArrowLeft, Target, Award, Clock, Trash2, Trophy, Calendar, AlertTriangle, Check } from 'lucide-react';
+import { useGetRoadmapSyncStatusQuery, useSyncRoadmapMutation } from '../store/apiSlice';
 
 export default function RoadmapPage() {
   const navigate = useNavigate();
   const [roadmap, setRoadmap] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Sync state hooks and toast states
+  const { data: syncData, refetch: refetchSyncStatus } = useGetRoadmapSyncStatusQuery(roadmap?._id, { skip: !roadmap?._id });
+  const [syncRoadmap, { isLoading: isSyncing }] = useSyncRoadmapMutation();
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [toasts, setToasts] = useState([]);
+
+  const addToast = (message, type = 'success') => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4500);
+  };
+
+  const syncStatus = syncData?.status || 'Not Synced';
+
+  const handleSyncClick = () => {
+    setShowConfirmModal(true);
+  };
+
+  const handleSyncExecute = async () => {
+    try {
+      const res = await syncRoadmap(roadmap._id).unwrap();
+      if (res.success) {
+        addToast(res.message || 'Roadmap synced to calendar successfully!', 'success');
+        setShowConfirmModal(false);
+        if (refetchSyncStatus) refetchSyncStatus();
+      }
+    } catch (err) {
+      console.error(err);
+      addToast(err?.data?.error || 'Failed to sync roadmap to calendar', 'error');
+      setShowConfirmModal(false);
+    }
+  };
 
   // Onboarding form states (in case they land here directly with no active roadmap)
   const [goalName, setGoalName] = useState('MERN Stack');
@@ -282,25 +318,63 @@ export default function RoadmapPage() {
             <ArrowLeft size={12} />
             Back to Dashboard
           </button>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{roadmap.title}</h1>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold text-white tracking-tight">{roadmap.title}</h1>
+            
+            {/* Sync Badge */}
+            {syncStatus === 'Synced' && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full select-none">
+                <Check size={10} /> Synced
+              </span>
+            )}
+            {syncStatus === 'Needs Update' && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full select-none">
+                <AlertTriangle size={10} /> Update Available
+              </span>
+            )}
+          </div>
           <p className="text-xs text-gray-400">Personalized Learning Roadmap • {roadmap.skillLevel} Track</p>
         </div>
 
-        <div className="flex items-center gap-6 bg-[#111625] px-5 py-3 rounded-2xl border border-[#1b2237]">
-          <div className="text-center">
-            <span className="text-[10px] text-gray-500 font-semibold block uppercase">Timeline</span>
-            <span className="text-xs font-bold text-white">{roadmap.timeline}</span>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-6 bg-[#111625] px-5 py-3 rounded-2xl border border-[#1b2237]">
+            <div className="text-center">
+              <span className="text-[10px] text-gray-500 font-semibold block uppercase">Timeline</span>
+              <span className="text-xs font-bold text-white">{roadmap.timeline}</span>
+            </div>
+            <div className="w-px h-8 bg-gray-900" />
+            <div className="text-center">
+              <span className="text-[10px] text-gray-500 font-semibold block uppercase">Commitment</span>
+              <span className="text-xs font-bold text-white">{roadmap.dailyCommitment} mins/day</span>
+            </div>
+            <div className="w-px h-8 bg-gray-900" />
+            <div className="text-center">
+              <span className="text-[10px] text-gray-500 font-semibold block uppercase">Completion</span>
+              <span className="text-xs font-bold text-emerald-400">{roadmap.completionPercentage}%</span>
+            </div>
           </div>
-          <div className="w-px h-8 bg-gray-900" />
-          <div className="text-center">
-            <span className="text-[10px] text-gray-500 font-semibold block uppercase">Commitment</span>
-            <span className="text-xs font-bold text-white">{roadmap.dailyCommitment} mins/day</span>
-          </div>
-          <div className="w-px h-8 bg-gray-900" />
-          <div className="text-center">
-            <span className="text-[10px] text-gray-500 font-semibold block uppercase">Completion</span>
-            <span className="text-xs font-bold text-emerald-400">{roadmap.completionPercentage}%</span>
-          </div>
+
+          {/* Sync Button Action */}
+          {syncStatus !== 'Synced' ? (
+            <button
+              onClick={handleSyncClick}
+              disabled={isSyncing}
+              className={`px-4 py-2.5 font-bold rounded-xl text-xs transition duration-200 cursor-pointer flex items-center gap-1.5 shadow-lg disabled:opacity-50 disabled:pointer-events-none ${
+                syncStatus === 'Needs Update'
+                  ? 'bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-white shadow-amber-950/20'
+                  : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-950/20'
+              }`}
+            >
+              <Calendar size={14} />
+              {syncStatus === 'Needs Update' ? 'Update Calendar' : 'Add Roadmap to Calendar'}
+            </button>
+          ) : (
+            <div className="px-4 py-2.5 bg-gray-900 border border-gray-800 text-gray-400 font-bold rounded-xl text-xs flex items-center gap-1.5 select-none">
+              <Check size={14} className="text-emerald-400" />
+              Already Synced
+            </div>
+          )}
         </div>
       </div>
 
@@ -476,7 +550,6 @@ export default function RoadmapPage() {
             <p>3. Completing a module automatically unlocks the subsequent locked module in the pathway.</p>
             <p>4. Completing tasks earns you XP which levels up your profile in real-time!</p>
           </div>
-
           {/* Option to delete current goal */}
           <button
             onClick={handleDeleteRoadmap}
@@ -487,6 +560,60 @@ export default function RoadmapPage() {
           </button>
         </div>
       </div>
+
+      {/* ── TOAST ALERTS OVERLAY ── */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none">
+        {toasts.map((t) => (
+          <div 
+            key={t.id} 
+            className={`p-3.5 rounded-2xl border text-xs font-semibold shadow-xl flex items-center gap-2.5 pointer-events-auto animate-in slide-in-from-bottom-5 duration-300 ${
+              t.type === 'error' 
+                ? 'bg-red-500/10 text-red-400 border-red-500/20' 
+                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+            }`}
+          >
+            {t.type === 'error' ? <AlertTriangle size={14} /> : <Check size={14} />}
+            <span>{t.message}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── SYNC CONFIRMATION DIALOG ── */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative text-center animate-in zoom-in-95 duration-200">
+            <div className="mx-auto w-12 h-12 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-full flex items-center justify-center">
+              <Calendar size={20} />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-base font-bold text-white">Import to Calendar?</h3>
+              <p className="text-xs text-gray-400">
+                {syncStatus === 'Needs Update' 
+                  ? 'Update this roadmap in your calendar? This will sync all modified milestones, add new modules, and clean up removed ones.'
+                  : 'Import this roadmap into your calendar? This will create calendar events for every module milestone.'
+                }
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 py-2.5 bg-gray-900 border border-gray-800 text-gray-300 font-bold rounded-xl text-xs hover:bg-gray-800 transition duration-200 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSyncExecute}
+                disabled={isSyncing}
+                className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs transition duration-200 cursor-pointer shadow-lg shadow-purple-950/20 disabled:opacity-50"
+              >
+                {isSyncing ? 'Importing...' : 'Import'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

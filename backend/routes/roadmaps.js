@@ -1,6 +1,7 @@
 import express from 'express';
 import authMiddleware from '../middleware/auth.js';
 import Roadmap from '../models/Roadmap.js';
+import Event from '../models/Event.js';
 
 const router = express.Router();
 
@@ -480,6 +481,142 @@ router.post('/archive', authMiddleware, async (req, res) => {
     const studentId = req.user.id;
     await Roadmap.updateMany({ studentId, active: true }, { active: false });
     res.json({ success: true, message: "Active roadmap archived" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 6. GET /api/roadmaps/:id/sync-status
+router.get('/:id/sync-status', authMiddleware, async (req, res) => {
+  try {
+    const roadmapId = req.params.id;
+    const studentId = req.user.id;
+
+    const roadmap = await Roadmap.findOne({ _id: roadmapId, studentId });
+    if (!roadmap) {
+      return res.status(404).json({ success: false, message: 'Roadmap not found' });
+    }
+
+    const events = await Event.find({ roadmapId, createdBy: studentId, isRoadmapEvent: true });
+
+    if (events.length === 0) {
+      return res.json({ success: true, status: 'Not Synced' });
+    }
+
+    if (events.length !== roadmap.modules.length) {
+      return res.json({ success: true, status: 'Needs Update' });
+    }
+
+    // Sort events by start date/time and modules by index order
+    const sortedEvents = [...events].sort((a, b) => new Date(a.startDateTime) - new Date(b.startDateTime));
+    const sortedModules = [...roadmap.modules];
+
+    for (let i = 0; i < sortedModules.length; i++) {
+      const mod = sortedModules[i];
+      const evt = sortedEvents[i];
+
+      const expectedTitle = mod.title;
+      const expectedDescription = mod.description || '';
+
+      if (evt.title !== expectedTitle || evt.description !== expectedDescription) {
+        return res.json({ success: true, status: 'Needs Update' });
+      }
+    }
+
+    res.json({ success: true, status: 'Synced' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 7. POST /api/roadmaps/:id/sync
+router.post('/:id/sync', authMiddleware, async (req, res) => {
+  try {
+    const roadmapId = req.params.id;
+    const studentId = req.user.id;
+
+    const roadmap = await Roadmap.findOne({ _id: roadmapId, studentId });
+    if (!roadmap) {
+      return res.status(404).json({ success: false, message: 'Roadmap not found' });
+    }
+
+    const existingEvents = await Event.find({ roadmapId, createdBy: studentId, isRoadmapEvent: true }).sort({ startDateTime: 1 });
+
+    const parseDurationToDays = (durationStr) => {
+      if (!durationStr) return 7;
+      const match = durationStr.match(/(\d+)\s*(day|week|month)/i);
+      if (!match) return 7;
+      const value = parseInt(match[1], 10);
+      const unit = match[2].toLowerCase();
+      if (unit.startsWith('day')) return value;
+      if (unit.startsWith('week')) return value * 7;
+      if (unit.startsWith('month')) return value * 30;
+      return 7;
+    };
+
+    let currentDate = new Date();
+    // Reset time to 09:00 for the start of the study blocks
+    currentDate.setHours(9, 0, 0, 0);
+
+    const modules = roadmap.modules;
+
+    for (let i = 0; i < modules.length; i++) {
+      const mod = modules[i];
+      const durationDays = parseDurationToDays(mod.estimatedDuration);
+
+      const startDateTime = new Date(currentDate);
+      const endDateTime = new Date(currentDate);
+      // End the event on the same day or duration days later (at 18:00)
+      endDateTime.setDate(startDateTime.getDate() + Math.max(0, durationDays - 1));
+      endDateTime.setHours(18, 0, 0, 0);
+
+      // Increment start date for the next module
+      currentDate.setDate(currentDate.getDate() + durationDays);
+
+      const expectedTitle = mod.title;
+      const expectedDescription = mod.description || '';
+
+      if (i < existingEvents.length) {
+        // Update existing event to preserve ID
+        const evt = existingEvents[i];
+        evt.title = expectedTitle;
+        evt.description = expectedDescription;
+        evt.startDateTime = startDateTime;
+        evt.endDateTime = endDateTime;
+        evt.category = roadmap.category || 'Study';
+        evt.color = '#8B5CF6'; // Violet color accent for roadmap syncs
+        evt.status = 'upcoming';
+        
+        await evt.save();
+      } else {
+        // Create new event
+        await Event.create({
+          title: expectedTitle,
+          description: expectedDescription,
+          startDateTime,
+          endDateTime,
+          category: roadmap.category || 'Study',
+          color: '#8B5CF6',
+          createdBy: studentId,
+          roadmapId,
+          isRoadmapEvent: true,
+          status: 'upcoming'
+        });
+      }
+    }
+
+    // Delete any trailing events (e.g. if modules count decreased)
+    if (existingEvents.length > modules.length) {
+      const eventsToDelete = existingEvents.slice(modules.length);
+      const idsToDelete = eventsToDelete.map(e => e._id);
+      await Event.deleteMany({ _id: { $in: idsToDelete } });
+    }
+
+    res.json({
+      success: true,
+      message: 'Roadmap calendar events synced successfully',
+      status: 'Synced'
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

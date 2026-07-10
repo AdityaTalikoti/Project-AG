@@ -6,7 +6,7 @@ export const apiSlice = createApi({
     baseUrl: '/api/',
     credentials: 'include'
   }),
-  tagTypes: ['Journal', 'DashboardStats'],
+  tagTypes: ['Journal', 'DashboardStats', 'Event'],
   endpoints: (builder) => ({
     getJournals: builder.query({
       query: (studentId) => `journal/${studentId}`,
@@ -49,6 +49,72 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['DashboardStats'],
     }),
+
+    // --- Calendar Events ---
+    getEvents: builder.query({
+      query: ({ start, end } = {}) => {
+        let url = 'events';
+        const params = [];
+        if (start) params.push(`start=${encodeURIComponent(start)}`);
+        if (end) params.push(`end=${encodeURIComponent(end)}`);
+        if (params.length) url += `?${params.join('&')}`;
+        return url;
+      },
+      providesTags: ['Event'],
+    }),
+    getEventById: builder.query({
+      query: (id) => `events/${id}`,
+      providesTags: (result, error, id) => [{ type: 'Event', id }],
+    }),
+    getTodayEvents: builder.query({
+      query: () => {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return `events/today?timezone=${encodeURIComponent(timezone)}`;
+      },
+      providesTags: ['Event'],
+    }),
+    getUpcomingEvents: builder.query({
+      query: () => 'events/upcoming',
+      providesTags: ['Event'],
+    }),
+    getDashboardEvents: builder.query({
+      query: () => 'events/dashboard',
+      providesTags: ['Event'],
+    }),
+    createEvent: builder.mutation({
+      query: (eventData) => ({
+        url: 'events',
+        method: 'POST',
+        body: eventData,
+      }),
+      invalidatesTags: ['Event', 'DashboardStats'],
+    }),
+    updateEvent: builder.mutation({
+      query: ({ id, ...eventData }) => ({
+        url: `events/${id}`,
+        method: 'PUT',
+        body: eventData,
+      }),
+      invalidatesTags: ['Event', 'DashboardStats'],
+    }),
+    deleteEvent: builder.mutation({
+      query: (id) => ({
+        url: `events/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Event', 'DashboardStats'],
+    }),
+    getRoadmapSyncStatus: builder.query({
+      query: (roadmapId) => `roadmaps/${roadmapId}/sync-status`,
+      providesTags: ['Event'],
+    }),
+    syncRoadmap: builder.mutation({
+      query: (roadmapId) => ({
+        url: `roadmaps/${roadmapId}/sync`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Event'],
+    }),
   }),
 });
 
@@ -58,5 +124,19 @@ export const {
   useGetActiveGoalQuery, 
   useAddJournalMutation,
   useAddFocusSessionMutation,
-  useUpdateDailyTargetMutation
+  useUpdateDailyTargetMutation,
+  
+  // Calendar Hooks
+  useGetEventsQuery,
+  useGetEventByIdQuery,
+  useGetTodayEventsQuery,
+  useGetUpcomingEventsQuery,
+  useGetDashboardEventsQuery,
+  useCreateEventMutation,
+  useUpdateEventMutation,
+  useDeleteEventMutation,
+
+  // Roadmap Sync Hooks
+  useGetRoadmapSyncStatusQuery,
+  useSyncRoadmapMutation
 } = apiSlice;
