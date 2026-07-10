@@ -104,6 +104,17 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['Event', 'DashboardStats'],
     }),
+    getRoadmapSyncStatus: builder.query({
+      query: (roadmapId) => `roadmaps/${roadmapId}/sync-status`,
+      providesTags: ['Event'],
+    }),
+    syncRoadmap: builder.mutation({
+      query: (roadmapId) => ({
+        url: `roadmaps/${roadmapId}/sync`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Event'],
+    }),
   }),
 });
 
@@ -123,5 +134,9 @@ export const {
   useGetDashboardEventsQuery,
   useCreateEventMutation,
   useUpdateEventMutation,
-  useDeleteEventMutation
+  useDeleteEventMutation,
+
+  // Roadmap Sync Hooks
+  useGetRoadmapSyncStatusQuery,
+  useSyncRoadmapMutation
 } = apiSlice;
