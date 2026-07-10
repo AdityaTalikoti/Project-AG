@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { useGetDashboardStatsQuery, useGetActiveGoalQuery } from '../store/apiSlice';
@@ -8,7 +8,7 @@ import RoadmapStepper from '../components/RoadmapStepper';
 import QuickActions from '../components/QuickActions';
 import Widgets from '../components/Widgets';
 import AchievementsList from '../components/AchievementsList';
-import { Flame, Clock, CheckCircle, Zap, Play } from 'lucide-react';
+import { Flame, Clock, CheckCircle, Zap, Play, Compass, Target } from 'lucide-react';
 
 const formatFocusTime = (hours) => {
   if (hours === undefined || hours === null || hours === 0) return '0 minutes';
@@ -168,9 +168,8 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Columns - Goals and Visual Progress */}
         <div className="lg:col-span-2 space-y-6">
-          <HeroCTA goal={goal} isLoading={isLoading} />
+          <HeroCTA activeRoadmap={stats.activeRoadmap} hasActiveRoadmap={stats.hasActiveRoadmap} isLoading={isLoading} />
           <WeeklyProgress weeklyData={stats.weeklyProgress} isLoading={isLoading} />
-          <RoadmapStepper roadmap={goal.roadmap} isLoading={isLoading} />
         </div>
 
         {/* Right Column - Actions and Lists */}

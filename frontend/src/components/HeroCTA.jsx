@@ -1,20 +1,177 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Compass } from 'lucide-react';
+import { Compass, Target } from 'lucide-react';
 
-export default function HeroCTA({ goal, isLoading }) {
+export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) {
+  const [goalName, setGoalName] = useState('MERN Stack');
+  const [customGoal, setCustomGoal] = useState('');
+  const [skillLevel, setSkillLevel] = useState('Beginner');
+  const [timeline, setTimeline] = useState('8 weeks');
+  const [commitment, setCommitment] = useState(60);
+  const [generating, setGenerating] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setGenerating(true);
+    try {
+      const selectedGoal = goalName === 'Custom' ? customGoal : goalName;
+      const res = await fetch('/api/roadmaps/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goal: selectedGoal,
+          skillLevel,
+          timeline,
+          dailyCommitment: commitment
+        })
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        alert("Failed to generate roadmap.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="bg-[#0a0e1a] p-6 rounded-2xl border border-[#121829] shadow-sm h-56 animate-pulse" />
     );
   }
 
-  const completion = goal?.completionPercentage || 0;
-  const roadmap = goal?.roadmap || [];
-  const completedCount = roadmap.filter(t => t.status === 'completed').length;
-  const inProgressCount = roadmap.filter(t => t.status === 'current').length;
-  const remainingCount = roadmap.filter(t => t.status === 'upcoming').length;
-  const totalCount = roadmap.length || 5;
+  // 1. If no active roadmap, show Onboarding form
+  if (!hasActiveRoadmap) {
+    return (
+      <div className="bg-[#0a0e1a] p-6 rounded-2xl border border-[#121829] shadow-sm space-y-6 animate-in slide-in-from-bottom duration-300">
+        <div className="flex items-center gap-3 border-b border-gray-900/60 pb-4">
+          <div className="bg-purple-500/10 p-2.5 rounded-xl border border-purple-500/20 text-purple-400">
+            <Target size={20} className="animate-pulse" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white">Set Your Learning Goal</h3>
+            <p className="text-xs text-gray-400">Generate a personalized modular learning roadmap to track your daily progress.</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Goal Dropdown */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] text-gray-400 font-semibold uppercase">Goal Track</label>
+              <select
+                value={goalName}
+                onChange={(e) => setGoalName(e.target.value)}
+                className="bg-[#111625] border border-[#1b2237] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 transition cursor-pointer"
+              >
+                <option value="MERN Stack">MERN Stack Mastery</option>
+                <option value="DSA">Data Structures & Algorithms</option>
+                <option value="AI/ML">Artificial Intelligence & ML</option>
+                <option value="React">React Developer Pathway</option>
+                <option value="Full Stack Development">Full Stack Engineering</option>
+                <option value="Placement Preparation">Placement & Technical Prep</option>
+                <option value="Custom">Custom Learning Track...</option>
+              </select>
+            </div>
+
+            {/* Skill level */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] text-gray-400 font-semibold uppercase">Experience Level</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Beginner', 'Intermediate', 'Advanced'].map((lvl) => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => setSkillLevel(lvl)}
+                    className={`py-2 text-[10px] font-bold rounded-xl border transition cursor-pointer ${
+                      skillLevel === lvl
+                        ? 'bg-purple-500/15 border-purple-500 text-purple-400'
+                        : 'bg-[#111625] border-[#1b2237] text-gray-400 hover:border-gray-700'
+                    }`}
+                  >
+                    {lvl}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {goalName === 'Custom' && (
+            <div className="flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-200">
+              <label className="text-[10px] text-gray-400 font-semibold uppercase">Custom Goal Name</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. AWS Cloud Architecture, Web3 Development"
+                value={customGoal}
+                onChange={(e) => setCustomGoal(e.target.value)}
+                className="bg-[#111625] border border-[#1b2237] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 transition"
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Timeline */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] text-gray-400 font-semibold uppercase">Timeline Target</label>
+              <select
+                value={timeline}
+                onChange={(e) => setTimeline(e.target.value)}
+                className="bg-[#111625] border border-[#1b2237] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 transition cursor-pointer"
+              >
+                <option value="4 weeks">4 Weeks (Intensive)</option>
+                <option value="8 weeks">8 Weeks (Standard)</option>
+                <option value="12 weeks">12 Weeks (Extended)</option>
+                <option value="16 weeks">16 Weeks (Complete)</option>
+              </select>
+            </div>
+
+            {/* Commitment */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] text-gray-400 font-semibold uppercase">Daily Commitment</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[30, 60, 120].map((mins) => (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => setCommitment(mins)}
+                    className={`py-2 text-[10px] font-bold rounded-xl border transition cursor-pointer ${
+                      commitment === mins
+                        ? 'bg-purple-500/15 border-purple-500 text-purple-400'
+                        : 'bg-[#111625] border-[#1b2237] text-gray-400 hover:border-gray-700'
+                    }`}
+                  >
+                    {mins >= 60 ? `${mins / 60} hr${mins > 60 ? 's' : ''}` : `${mins} min`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={generating}
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 px-4 rounded-xl text-xs transition duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-purple-950/20 disabled:opacity-50"
+            >
+              {generating ? "Generating Pathway..." : "Generate Custom Learning Roadmap 🚀"}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // 2. If active roadmap exists, render premium circular progress card
+  const completion = activeRoadmap?.completionPercentage || 0;
+  const completedCount = activeRoadmap?.completedModulesCount || 0;
+  const inProgressCount = activeRoadmap?.inProgressModulesCount || 0;
+  const totalCount = activeRoadmap?.totalModulesCount || 4;
+  const remainingCount = totalCount - completedCount - inProgressCount;
 
   // SVG circle calculations
   const radius = 40;
@@ -62,8 +219,10 @@ export default function HeroCTA({ goal, isLoading }) {
 
         {/* Text & Progress Bars */}
         <div className="flex-1 text-center sm:text-left">
-          <h2 className="text-lg font-bold text-white tracking-tight">{goal?.title || "Active Goal"}</h2>
-          <p className="text-[11px] text-gray-400 mt-1">You're making steady progress.</p>
+          <h2 className="text-lg font-bold text-white tracking-tight">{activeRoadmap?.title}</h2>
+          <p className="text-[11px] text-gray-400 mt-1">
+            Active Module: <strong className="text-emerald-400">{activeRoadmap?.activeModuleName}</strong>
+          </p>
           <p className="text-[10px] text-gray-500 font-semibold mt-2">{completedCount} of {totalCount} modules completed</p>
           
           {/* Horizontal Progress Bar */}
@@ -86,7 +245,7 @@ export default function HeroCTA({ goal, isLoading }) {
             </div>
             <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
               <span className="w-2 h-2 rounded-full bg-blue-500" />
-              <span>Remaining: <strong>{remainingCount}</strong></span>
+              <span>Locked: <strong>{remainingCount >= 0 ? remainingCount : 0}</strong></span>
             </div>
           </div>
         </div>
