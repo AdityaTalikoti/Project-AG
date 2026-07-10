@@ -5,8 +5,8 @@ import { logoutUser } from '../store/authSlice';
 import { useGetDashboardStatsQuery } from '../store/apiSlice';
 import {
   GraduationCap, Home, BookOpen, Compass, CheckSquare, Layers,
-  FileText, BarChart2, LineChart, Award, Users, Activity,
-  Settings, LogOut, Search, Bell, Calendar, Moon, Sun, Flame, Menu, X
+  FileText, BarChart2, Settings, LogOut, Search, Bell, Calendar, 
+  Moon, Sun, Menu
 } from 'lucide-react';
 
 export default function Layout() {
@@ -183,7 +183,11 @@ export default function Layout() {
               <Bell size={18} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-[#0a0e1a]" />
             </button>
-            <button className="text-gray-400 hover:text-white transition p-2 rounded-xl hover:bg-[#111625]">
+            <button 
+              onClick={() => navigate('/dashboard/calendar')}
+              className="text-gray-400 hover:text-white transition p-2 rounded-xl hover:bg-[#111625]"
+              title="Open Calendar"
+            >
               <Calendar size={18} />
             </button>
             <button 

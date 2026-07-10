@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Compass, CheckCircle2, Lock, ArrowLeft, Target, Award, Clock, Trash2, Trophy, Calendar, AlertTriangle, Check } from 'lucide-react';
-import { useGetRoadmapSyncStatusQuery, useSyncRoadmapMutation } from '../store/apiSlice';
+import { 
+  useGetRoadmapSyncStatusQuery, 
+  useSyncRoadmapMutation,
+  useDeleteActiveRoadmapMutation,
+  useArchiveActiveRoadmapMutation
+} from '../store/apiSlice';
 
 export default function RoadmapPage() {
   const navigate = useNavigate();
@@ -11,6 +16,8 @@ export default function RoadmapPage() {
   // Sync state hooks and toast states
   const { data: syncData, refetch: refetchSyncStatus } = useGetRoadmapSyncStatusQuery(roadmap?._id, { skip: !roadmap?._id });
   const [syncRoadmap, { isLoading: isSyncing }] = useSyncRoadmapMutation();
+  const [deleteActiveRoadmap] = useDeleteActiveRoadmapMutation();
+  const [archiveActiveRoadmap] = useArchiveActiveRoadmapMutation();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [toasts, setToasts] = useState([]);
 
@@ -138,9 +145,8 @@ export default function RoadmapPage() {
   const handleDeleteRoadmap = async () => {
     // if (!window.confirm("Are you sure you want to reset your current goal track? All progress on this roadmap will be permanently lost.")) return;
     try {
-      const res = await fetch('/api/roadmaps/active', { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) {
+      const res = await deleteActiveRoadmap().unwrap();
+      if (res.success) {
         setRoadmap(null);
       } else {
         alert("Failed to delete active roadmap.");
@@ -153,9 +159,8 @@ export default function RoadmapPage() {
 
   const handleArchiveRoadmap = async () => {
     try {
-      const res = await fetch('/api/roadmaps/archive', { method: 'POST' });
-      const json = await res.json();
-      if (json.success) {
+      const res = await archiveActiveRoadmap().unwrap();
+      if (res.success) {
         setRoadmap(null);
       } else {
         alert("Failed to archive active roadmap.");

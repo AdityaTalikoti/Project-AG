@@ -670,7 +670,7 @@ export default function CalendarPage() {
       {/* 1. CREATE EVENT MODAL */}
       {activeModal === 'create' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
+          <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto scrollbar-thin">
             <button onClick={closeModals} className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 hover:bg-gray-800 rounded-lg transition cursor-pointer">
               <X size={18} />
             </button>
@@ -810,7 +810,7 @@ export default function CalendarPage() {
       {/* 2. EDIT EVENT MODAL */}
       {activeModal === 'edit' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
+          <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto scrollbar-thin">
             <button onClick={closeModals} className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 hover:bg-gray-800 rounded-lg transition cursor-pointer">
               <X size={18} />
             </button>
@@ -972,7 +972,7 @@ export default function CalendarPage() {
       {/* 3. EVENT DETAILS DIALOG */}
       {activeModal === 'details' && selectedEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200">
+          <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto scrollbar-thin">
             <button onClick={closeModals} className="absolute top-4 right-4 text-gray-400 hover:text-white p-1 hover:bg-gray-800 rounded-lg transition cursor-pointer">
               <X size={18} />
             </button>

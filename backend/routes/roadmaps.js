@@ -468,8 +468,16 @@ router.post('/tasks/toggle', authMiddleware, async (req, res) => {
 router.delete('/active', authMiddleware, async (req, res) => {
   try {
     const studentId = req.user.id;
-    await Roadmap.deleteOne({ studentId, active: true });
-    res.json({ success: true, message: "Active roadmap deleted" });
+    const activeRoadmap = await Roadmap.findOne({ studentId, active: true });
+    if (activeRoadmap) {
+      await Event.deleteMany({ 
+        roadmapId: activeRoadmap._id, 
+        createdBy: studentId, 
+        isRoadmapEvent: true 
+      });
+      await Roadmap.deleteOne({ _id: activeRoadmap._id });
+    }
+    res.json({ success: true, message: "Active roadmap deleted and associated calendar events cleared" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
