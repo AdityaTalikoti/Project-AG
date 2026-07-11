@@ -1,7 +1,9 @@
+import { buildPrompt } from '../services/ai/promptBuilder.js';
 import { generateGeminiReply } from '../services/ai/geminiService.js';
 
 /**
  * Controller to handle POST /api/ai/chat requests.
+ * Keeps the controller layer thin by offloading prompt building and API service logic.
  */
 export const handleChat = async (req, res, next) => {
   try {
@@ -14,8 +16,11 @@ export const handleChat = async (req, res, next) => {
       throw error;
     }
 
-    // Call Gemini service
-    const reply = await generateGeminiReply(message);
+    // Call Prompt Builder to construct the system-enriched prompt
+    const structuredPrompt = buildPrompt(message);
+
+    // Call Gemini service with the pre-built prompt
+    const reply = await generateGeminiReply(structuredPrompt);
 
     // Return JSON response on success
     return res.status(200).json({

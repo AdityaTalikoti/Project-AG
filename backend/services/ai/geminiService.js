@@ -10,11 +10,11 @@ if (apiKey) {
 
 /**
  * Service to generate content using the Google GenAI SDK.
- * Tries the requested gemini-2.5-flash model, with an automatic fallback to gemini-3.5-flash if the former is unavailable.
- * @param {string} message - The user's input message.
+ * Receives the already-built prompt and handles API calls and fallbacks.
+ * @param {string} prompt - The pre-built structured prompt.
  * @returns {Promise<string>} - The response text from Gemini.
  */
-export const generateGeminiReply = async (message) => {
+export const generateGeminiReply = async (prompt) => {
   if (!ai) {
     const currentApiKey = process.env.GEMINI_API_KEY;
     if (!currentApiKey) {
@@ -24,10 +24,10 @@ export const generateGeminiReply = async (message) => {
   }
 
   try {
-    // Attempt with requested model
+    // Attempt with default requested model
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: message,
+      contents: prompt,
     });
 
     if (!response || !response.text) {
@@ -47,7 +47,7 @@ export const generateGeminiReply = async (message) => {
       try {
         const response = await ai.models.generateContent({
           model: 'gemini-3.5-flash',
-          contents: message,
+          contents: prompt,
         });
 
         if (!response || !response.text) {
