@@ -11,6 +11,7 @@ import FocusTimerPage from './pages/FocusTimerPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 import RoadmapPage from './pages/RoadmapPage';
 import CalendarPage from './pages/CalendarPage';
+import AIMentor from './pages/AIMentor';
 
 function App() {
   const dispatch = useDispatch();
@@ -45,7 +46,7 @@ function App() {
           <Route path="analytics" element={<ComingSoonPage title="Analytics" />} />
           <Route path="achievements" element={<ComingSoonPage title="Achievements" />} />
           <Route path="peers" element={<ComingSoonPage title="Peers" />} />
-          <Route path="mentor" element={<ComingSoonPage title="Mentor Portal" />} />
+          <Route path="mentor" element={<AIMentor />} />
           <Route path="settings" element={<ComingSoonPage title="Settings" />} />
         </Route>
 
