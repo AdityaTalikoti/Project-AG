@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, ChevronRight, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Widgets({ upcomingTasks = [], aiInsight, isLoading }) {
   if (isLoading) {
@@ -35,9 +36,14 @@ export default function Widgets({ upcomingTasks = [], aiInsight, isLoading }) {
           <p className="text-gray-300 text-xs leading-relaxed max-w-[200px]">
             {aiInsight || "You've been consistent with Trees. Next logical step is Graphs. Try implementing BFS today."}
           </p>
-          <button className="text-[10px] text-purple-400 font-bold hover:text-purple-300 transition flex items-center gap-0.5 cursor-pointer pt-1">
-            Explore Graphs Roadmap <ChevronRight size={12} />
-          </button>
+          <div className="pt-1">
+            <Link 
+              to="/dashboard/mentor"
+              className="text-[10px] text-emerald-400 font-bold hover:text-emerald-300 transition flex items-center gap-0.5 cursor-pointer"
+            >
+              Open AI Mentor <ChevronRight size={12} />
+            </Link>
+          </div>
         </div>
 
         {/* Glowing Brain Graphic */}
