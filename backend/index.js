@@ -13,6 +13,8 @@ import goalsRoutes from './routes/goals.js';
 import focusSessionRoutes from './routes/focusSession.js';
 import roadmapRoutes from './routes/roadmaps.js';
 import eventRoutes from './routes/events.js';
+import aiRoutes from './routes/aiRoutes.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
 
@@ -35,6 +37,7 @@ app.use('/api/goals', goalsRoutes);
 app.use('/api/focus-session', focusSessionRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/ai', aiRoutes);
 
 // ── Health Check ──
 app.get('/api/health', (req, res) => {
@@ -52,6 +55,9 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// ── Centralized Error Handler Middleware ──
+app.use(errorHandler);
 
 // ── MongoDB + Server Start ──
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/scholarsync';

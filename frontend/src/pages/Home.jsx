@@ -8,7 +8,7 @@ import Widgets from '../components/Widgets';
 import QuickCreateEventModal from '../components/QuickCreateEventModal';
 import { 
   Flame, Clock, CheckCircle, Zap, Play,
-  Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search, 
+  Calendar as CalendarIcon, Search, 
   Filter, Timer, AlertCircle, Plus, Check, ArrowUpRight 
 } from 'lucide-react';
 
@@ -127,53 +127,7 @@ export default function Home() {
     return `in ${diffDays} days`;
   };
 
-  // 4. Mini Calendar Helpers
-  const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
-
-  const [currentYear, setCurrentYear] = useState(now.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(now.getMonth());
-
-  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
-  const firstDayIndex = getFirstDayOfMonth(currentYear, currentMonth);
-
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
-
-  const miniCalendarDays = [];
-  for (let i = 0; i < firstDayIndex; i++) {
-    miniCalendarDays.push(null);
-  }
-  for (let i = 1; i <= daysInMonth; i++) {
-    miniCalendarDays.push(new Date(currentYear, currentMonth, i));
-  }
-
-  const prevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(prev => prev - 1);
-    } else {
-      setCurrentMonth(prev => prev - 1);
-    }
-  };
-
-  const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(prev => prev + 1);
-    } else {
-      setCurrentMonth(prev => prev + 1);
-    }
-  };
-
-  const hasEventOnDate = (date) => {
-    if (!date) return false;
-    return allEvents.some(evt => isEventOnDay(evt, date));
-  };
-
-  // 5. Filter Schedule listings
+  // 4. Filter Schedule listings
   const filteredScheduleEvents = (scheduleView === 'Today' ? todayEvents : upcomingEvents).filter(evt => {
     const matchesSearch = evt.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (evt.description || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -575,61 +529,7 @@ export default function Home() {
             )}
           </div>
 
-          {/* Current Month Mini Calendar Card */}
-          <div className="bg-[#0a0e1a] p-5 rounded-2xl border border-[#121829] shadow-sm space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <CalendarIcon size={14} className="text-emerald-400" />
-                Mini Calendar
-              </h3>
-              
-              <div className="flex items-center gap-1">
-                <button onClick={prevMonth} className="text-gray-500 hover:text-white p-1 hover:bg-gray-900 rounded-lg transition cursor-pointer">
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="text-[10px] font-bold text-white font-mono uppercase w-20 text-center">
-                  {monthNames[currentMonth].substring(0, 3)} {currentYear}
-                </span>
-                <button onClick={nextMonth} className="text-gray-500 hover:text-white p-1 hover:bg-gray-900 rounded-lg transition cursor-pointer">
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
 
-            {/* Grid days */}
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
-                <span key={idx} className="text-[8px] text-gray-500 font-bold font-mono">{day}</span>
-              ))}
-              
-              {miniCalendarDays.map((day, idx) => {
-                if (!day) return <div key={idx} className="aspect-square" />;
-                
-                const isToday = day.getDate() === now.getDate() && 
-                                day.getMonth() === now.getMonth() && 
-                                day.getFullYear() === now.getFullYear();
-
-                const hasEvents = hasEventOnDate(day);
-
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => navigate('/dashboard/calendar')}
-                    className={`aspect-square relative rounded-lg flex flex-col items-center justify-center text-[10px] font-semibold transition cursor-pointer ${
-                      isToday 
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
-                        : 'text-gray-400 hover:bg-[#111625] hover:text-white'
-                    }`}
-                  >
-                    <span>{day.getDate()}</span>
-                    {hasEvents && (
-                      <span className="absolute bottom-1 w-1 h-1 bg-purple-500 rounded-full" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
           <Widgets 
             upcomingTasks={stats.upcomingTasks}
