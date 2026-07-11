@@ -1,11 +1,14 @@
 import { getSystemPrompt } from './systemPrompt.js';
+import { buildContext } from './contextBuilder.js';
 
 /**
- * Combines the system prompt and the user message into a single structured prompt.
+ * Combines the system prompt, retrieved student context, and user message into a single structured prompt.
  * @param {string} userMessage - The user's input message.
- * @returns {string} - The combined prompt.
+ * @param {string} studentId - The authenticated student ID.
+ * @returns {Promise<string>} - The enriched, structured prompt.
  */
-export const buildPrompt = (userMessage) => {
+export const buildPrompt = async (userMessage, studentId) => {
   const systemPrompt = getSystemPrompt();
-  return `${systemPrompt}\n\nStudent Message: "${userMessage}"\nMentor Response:`;
+  const context = await buildContext(studentId);
+  return `${systemPrompt}\n\n${context}Student Message: "${userMessage}"\nMentor Response:`;
 };

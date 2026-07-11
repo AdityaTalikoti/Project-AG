@@ -8,6 +8,7 @@ import { generateGeminiReply } from '../services/ai/geminiService.js';
 export const handleChat = async (req, res, next) => {
   try {
     const { message } = req.body;
+    const studentId = req.user?.id; // Authenticated student ID from authMiddleware
 
     // Validate request: Reject empty, null, undefined or non-string messages
     if (!message || typeof message !== 'string' || message.trim() === '') {
@@ -16,8 +17,8 @@ export const handleChat = async (req, res, next) => {
       throw error;
     }
 
-    // Call Prompt Builder to construct the system-enriched prompt
-    const structuredPrompt = buildPrompt(message);
+    // Call Prompt Builder to construct the system-enriched prompt (now async)
+    const structuredPrompt = await buildPrompt(message, studentId);
 
     // Call Gemini service with the pre-built prompt
     const reply = await generateGeminiReply(structuredPrompt);
