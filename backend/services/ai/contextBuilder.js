@@ -1,10 +1,11 @@
 import Goal from '../../models/Goal.js';
 import Roadmap from '../../models/Roadmap.js';
 import Event from '../../models/Event.js';
+import { buildJournalContext } from './journalContextBuilder.js';
 
 /**
  * Builds the context string for the authenticated student.
- * Gathers active goals, roadmaps, and calendar events.
+ * Gathers active goals, roadmaps, calendar events, and summarized journals.
  * @param {string} studentId - The ID of the authenticated user.
  * @returns {Promise<string>} - The context text to append to the system prompt.
  */
@@ -112,6 +113,12 @@ export const buildContext = async (studentId) => {
       context += '\n';
     } else {
       context += `**Calendar & Schedule**: No upcoming events or deadlines scheduled.\n\n`;
+    }
+
+    // 4. Fetch and Append Summarized Journal Context (Phase 5)
+    const journalContext = await buildJournalContext(studentId);
+    if (journalContext) {
+      context += journalContext;
     }
 
     return context;
