@@ -6,7 +6,7 @@ const subTaskSchema = new mongoose.Schema({
 });
 
 const goalSchema = new mongoose.Schema({
-  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   title: { type: String, required: true },
   description: { type: String },
   status: { type: String, enum: ['Active', 'Completed', 'Paused'], default: 'Active' },

@@ -10,13 +10,25 @@ import Journal from '../../models/Journal.js';
  */
 export const buildStudyPlanContext = async (studentId) => {
   const today = new Date();
-  
-  // 1. Fetch Active Roadmap
-  const activeRoadmap = await Roadmap.findOne({ studentId, active: true });
-  
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+
   let roadmapContext = null;
   let missedMilestones = [];
   let isAhead = false;
+
+  // Parallelize active roadmap, today's events, and recent journals lookup
+  const [activeRoadmap, todayEvents, recentJournals] = await Promise.all([
+    Roadmap.findOne({ studentId, active: true }),
+    Event.find({
+      createdBy: studentId,
+      isRoadmapEvent: { $ne: true },
+      startDateTime: { $gte: startOfToday, $lte: endOfToday }
+    }),
+    Journal.find({ studentId }).sort({ createdAt: -1 }).limit(3)
+  ]);
 
   if (activeRoadmap) {
     // Fetch related calendar events for matching modules
@@ -27,9 +39,6 @@ export const buildStudyPlanContext = async (studentId) => {
     }).sort({ startDateTime: 1 });
 
     // Identify missed milestones
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
     activeRoadmap.modules.forEach((mod, idx) => {
       const evt = roadmapEvents[idx];
       // If module is not completed, and its calendar event end date has passed before today
@@ -82,19 +91,7 @@ export const buildStudyPlanContext = async (studentId) => {
     };
   }
 
-  // 2. Fetch Calendar Events for Today (non-roadmap study events)
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date();
-  endOfDay.setHours(23, 59, 59, 999);
-
-  const todayEvents = await Event.find({
-    createdBy: studentId,
-    isRoadmapEvent: { $ne: true },
-    startDateTime: { $gte: startOfDay, $lte: endOfDay }
-  });
-
-  // Calculate workloads
+  // Calculate workloads from today's non-roadmap events
   const eventCount = todayEvents.length;
   let totalDurationMinutes = 0;
   todayEvents.forEach(evt => {
@@ -114,11 +111,6 @@ export const buildStudyPlanContext = async (studentId) => {
     description: evt.description || '',
     durationMinutes: Math.round((new Date(evt.endDateTime) - new Date(evt.startDateTime)) / 60000)
   }));
-
-  // 3. Fetch Recent Journal Reflections (latest 3)
-  const recentJournals = await Journal.find({ studentId })
-    .sort({ createdAt: -1 })
-    .limit(3);
 
   const journalsContext = recentJournals.map(j => ({
     mood: j.mood,

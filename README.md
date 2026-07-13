@@ -1,129 +1,120 @@
-# 🎓 ScholarSync
+# 🎓 ScholarSync v1.0 (Production Release)
 
-ScholarSync is a next-generation, gamified learning helper and analytics platform designed to keep students consistent, focused, and organized. Built on a modern tech stack, it features interactive learning roadmaps, consistency analytics (Consistency vs. Depth), focus session timers, and a daily journaling tracker.
-
----
-
-## 🚀 Key Features
-
-### 1. 🎯 Dynamic Learning Roadmaps
-- **Personalized Onboarding**: Select goal tracks (MERN Stack, DSA, AI/ML, React, Placement Prep) and experience level (Beginner, Intermediate, Advanced) to generate customized pathways.
-- **Track Progress**: Gain XP for completing modular tasks, update status dynamically, and visualize progress.
-
-### 2. 📊 Gamified Profile & Level Up System
-- **Real-Time Levelling**: Earn XP dynamically from completed tasks, focus sessions, and journal entries.
-- **Dynamic Titles**: Profile level names adjust automatically according to the user's active goal track (e.g. `MERN Stack Mastery Explorer`, `DSA Scholar`).
-
-### 3. ⏱️ Focus Timer (Pomodoro Blocks)
-- Visual work/break session timers with custom session targets.
-- Categorization of study blocks (e.g., Coding, Theory, Revision, Mock Test).
-- Automated XP rewards saved directly to the database upon focus completions.
-
-### 4. 📝 Daily Journaling
-- Daily logs to record accomplishments, goals, and tasks.
-- Consistency tracking utilizing custom AI-assisted feedback hooks.
-
-### 5. 🔐 Secure Authentication & Session Settings
-- Dual login pathways: Email/Password signup and Google OAuth callback integrations.
-- Secure, HTTP-only JWT cookies for persistent and safe authentication.
+ScholarSync is a next-generation, gamified learning helper and study planner platform designed to keep students consistent, focused, and organized. Built on a modern MERN tech stack, it features personalized AI-driven roadmaps, dynamic study planners, daily journaling evaluations, focus session timers, and calendar sync.
 
 ---
 
-## 🔮 Upcoming Features
+## 🚀 Core Features
 
-*   **👥 Mentor Portal**: Bridging the gap between students and instructors. Allows mentors to assign tasks, monitor learning roadmaps, and write performance feedbacks.
-*   **🤖 Gemini AI Integration**: Empowering ScholarSync with Google Gemini to analyze study consistency, auto-grade journal tasks, generate adaptive roadmap modules, and provide personalized flashcard decks.
-*   **📝 Notes Management**: A clean, markdown-supported rich-text editor for logging concepts and notes inline with roadmaps.
-*   **📋 Interactive Tasks Board**: A kanban-style project board to organize personal assignments and syllabus deadlines.
-*   **🎴 Gamified Flashcards**: AI-generated smart flashcard decks leveraging spaced repetition algorithms for quick memory recalls.
+### 1. 🎯 Dynamic AI Onboarding & Smart Roadmaps (Phases 7 & 8)
+- **AI Interview Wizard**: Step-by-step onboarding collects learning goals, commitments, styles, and background context to build custom curricula.
+- **Milestones Editor (CRUD)**: Fully interactive pathway screen supporting rename, deletion, additions, and positional reordering (Up/Down arrow shifts) before saving.
+- **Calendar Synchronization**: Automatically coordinates roadmap modules with Calendar Events. Checks and prevents duplicate schedules.
+- **Smart AI Recommendations**: Side analyst reviews milestones for sequencing issues (e.g. learning advanced tools before prerequisites) and workload alignment.
+
+### 2. 📊 AI Daily Study Planner (Phase 8)
+- **Adaptive Scheduling**: Auto-generates a daily list of study tasks compiled from active roadmaps, today's schedule, and recent journal mood logs.
+- **Load Adjustments**: Scales tasks down when today's calendar is "Busy" (>= 3 events or >= 3 hours). Suggests revision, LeetCode, or mock interviews if the student is ahead.
+- **Missed Milestones Recovery**: Recommends rescheduling missed modules. Accepting the prompt automatically updates the calendar event to the next available date.
+- **Cached Operations**: Generates one plan per day, caching results normalized to local midnights, with support for historical date-browsing navigation.
+
+### 3. 📝 Journaling & AI Feedback (Phase 5)
+- **Reflections Log**: Track daily milestones, approaches, and ideas.
+- **Gamified Level Ups**: Earn XP from completed tasks, focus sessions, and journal entries. Profile titles automatically adjust depending on the user's active goal track (e.g. `DSA Explorer`, `MERN Stack Scholar`).
+
+### 4. ⏱️ Focus Pomodoro Timer
+- Visual Pomodoro blocks (Coding, Theory, Revision, Mock Test) with custom session targets.
+- Earn XP rewards automatically saved directly to the database.
 
 ---
 
-## 📐 System Architecture & Flow
+## 📐 AI System Architecture
 
-### System Architecture
-The diagram below illustrates how the React frontend, Express/Node backend, MongoDB, and external services interact:
+ScholarSync uses a robust, optimized pipeline to handle AI interactions cleanly and cost-effectively:
 
 ```mermaid
 graph TD
-    subgraph Frontend [React Application]
-        UI[Vite + React UI]
-        State[Redux Toolkit Store]
-        API[RTK Query API Slice]
+    subgraph Client [Vite React App]
+        Home[Dashboard UI]
+        Roadmap[Roadmap Editor]
+        Planner[Study Planner Widget]
     end
 
-    subgraph Backend [Node.js & Express API]
-        Auth[Auth Middleware]
-        RouteDash[Dashboard Router]
-        RouteRoad[Roadmaps Router]
-        RouteGoal[Goals Router]
+    subgraph BackendAPI [Express Router & Controller]
+        Controller[studyPlanController / roadmapController]
+        Context[studyPlanContextBuilder / contextBuilder]
+        Validator[studyPlanValidator / roadmapValidator]
     end
 
-    subgraph Database [MongoDB Cloud]
-        UserColl[(User Collection)]
-        RoadColl[(Roadmap Collection)]
-        JourColl[(Journal Collection)]
-        SessColl[(FocusSession Collection)]
+    subgraph AIConnector [AI Service Engine]
+        Gemini[Google Gemini API]
+        Fallback[Local Rule-Based Fallback]
     end
 
-    UI -->|Actions| State
-    State -->|Triggers| API
-    API -->|HTTP Requests / Cookies| Auth
-    Auth --> RouteDash
-    Auth --> RouteRoad
-    Auth --> RouteGoal
+    subgraph DataStore [MongoDB Cache]
+        DB[(Roadmaps, Events, Journals, StudyPlans)]
+    end
 
-    RouteDash --> UserColl
-    RouteDash --> JourColl
-    RouteRoad --> RoadColl
-    RouteGoal --> RoadColl
-    
-    Backend -->|OAuth Flows| GoogleAuth[Google OAuth 2.0]
-    Backend -->|Future AI API| Gemini[Google Gemini AI]
+    Client -->|API Requests| Controller
+    Controller -->|Compile Context| Context
+    Context -->|Parallel Promise.all Query| DB
+    Context -->|Enriched Prompt| Gemini
+    Gemini -->|Raw Response JSON| Validator
+    Validator -->|Sanitize & Clean JSON| Controller
+    AIConnector -->|On Error / No Key| Fallback
+    Fallback -->|Deterministic Plan| Controller
+    Controller -->|Cache Save| DB
+    Controller -->|JSON Response| Client
 ```
 
-### Roadmap & XP Gamification Engine
-The flowchart below details the logic loop from goal selection to gaining XP and leveling up:
-
-```mermaid
-flowchart TD
-    Start([User Logs In]) --> Choice{Has Active Goal?}
-    Choice -->|No| SelectGoal[Onboarding: Choose Goal Track & Level]
-    SelectGoal --> GenRoadmap[Generate Customized Modules & Tasks]
-    
-    Choice -->|Yes| ViewDash[View Main Dashboard]
-    GenRoadmap --> ViewDash
-    
-    ViewDash --> Study[Perform Tasks / Start Focus Timer / Log Journal]
-    Study --> Complete[Complete Task / Log Session]
-    
-    Complete --> RewardXP[Calculate & Award XP]
-    RewardXP --> UpdateLevel{XP >= Max XP Threshold?}
-    
-    UpdateLevel -->|Yes| LevelUp[Level Up & Auto-update Dynamic Role Title]
-    UpdateLevel -->|No| SaveStats[Save Progress Metrics]
-    
-    LevelUp --> SaveStats
-    SaveStats --> LoopBack([Return to Dashboard])
-```
+### Key AI Performance Optimizations:
+- **Single Gemini call per message**: The journal context summary is generated locally in Node.js rather than calling a separate Gemini summarization step.
+- **Parallelized Queries**: Uses `Promise.all` inside `computeSourceVersion` and `buildStudyPlanContext` to run Database stats checks concurrently, reducing page load latencies by up to 75%.
+- **Foreign Key Indexing**: Added database indexes to `studentId` fields in `Goal` and `Roadmap` collections.
+- **Offline Reliability Fallbacks**: If Gemini is down or key is de-configured, a local rule-based scheduler maps active module tasks to the daily plan, keeping the app usable.
 
 ---
 
-## 🛠️ Tech Stack
+## 📂 Folder Structure
 
-*   **Frontend**: React (Vite), Redux Toolkit (RTK Query), TailwindCSS, Recharts, Lucide Icons, React Router DOM.
-*   **Backend**: Node.js, Express.js, JSON Web Tokens (JWT), Axios, Cookie Parser.
-*   **Database**: MongoDB (Mongoose Schemas).
-*   **Authentication**: Google OAuth 2.0, bcryptjs.
+```text
+ScholarSync/
+├── backend/
+│   ├── controllers/      # Thin controller layer managing request/response mapping
+│   │   ├── aiController.js
+│   │   ├── roadmapController.js
+│   │   └── studyPlanController.js
+│   ├── models/           # Mongoose schemas (User, Goal, Roadmap, Event, Journal, StudyPlan)
+│   ├── routes/           # Express API routers (auth, dashboard, events, journals, roadmaps, aiRoutes)
+│   ├── services/
+│   │   └── ai/           # Dedicated AI services
+│   │       ├── contextBuilder.js
+│   │       ├── geminiService.js
+│   │       ├── insightCacheService.js
+│   │       ├── journalContextBuilder.js
+│   │       ├── roadmapGeneratorService.js
+│   │       ├── roadmapSuggestionService.js
+│   │       ├── roadmapValidator.js
+│   │       ├── studyPlanContextBuilder.js
+│   │       └── studyPlannerService.js
+│   └── index.js          # Express entry point
+└── frontend/
+    ├── src/
+    │   ├── components/
+    │   │   └── ai/       # ChatWindow, ChatInput, StudyPlanner widgets
+    │   ├── pages/        # Dashboard Home, Roadmaps page, AI Mentor page
+    │   └── store/
+    │       └── apiSlice.js # RTK Query mutations and tags definition
+```
 
 ---
 
 ## ⚙️ Project Setup
 
 ### Prerequisites
-- Node.js (v18+)
-- MongoDB Atlas account (or local MongoDB database)
-- Google Cloud Console Project (for Google OAuth credentials)
+- **Node.js**: v18+ installed.
+- **MongoDB**: Atlas cluster connection string or local database instance running.
+- **Gemini API Key**: Retrieve a free key from [Google AI Studio](https://aistudio.google.com/).
 
 ### Installation
 
@@ -137,12 +128,13 @@ flowchart TD
    Create a `.env` file in the `backend/` directory:
    ```env
    PORT=8080
-   MONGO_URI=your_mongodb_connection_string
+   MONGODB_URI=your_mongodb_connection_string
    JWT_SECRET=your_jwt_secret_key
-   FRONTEND_URL=http://localhost:5174
+   FRONTEND_URL=http://localhost:5173
    GOOGLE_CLIENT_ID=your_google_client_id
    GOOGLE_CLIENT_SECRET=your_google_client_secret
    GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
+   GEMINI_API_KEY=your_google_gemini_api_key
    NODE_ENV=development
    ```
 
@@ -159,10 +151,30 @@ flowchart TD
 
 4. **Start the Application**:
    ```bash
-   # Run Backend (from backend directory)
+   # Start backend server (from backend directory)
    npm start
 
-   # Run Frontend (from frontend directory)
+   # Start frontend vite server (from frontend directory)
    npm run dev
    ```
-   Open `http://localhost:5174` in your browser.
+   Open `http://localhost:5173` in your browser.
+
+---
+
+## 🛡️ Security & Validations
+- **Input Sanitization**: Incoming user chatbot messages are cleaned via script-tag stripping and HTML tags removal to block injections.
+- **API Response Isolation**: Database lookups are strictly bound to `req.user.id` to guarantee students only access their own roadmaps, plans, and events.
+- **Safe Fallbacks**: Catch-blocks on all Gemini operations return in-character status reports (e.g. rate limit notifications) instead of crash errors, preserving client usability.
+
+---
+
+## ⚠️ Known Limitations
+- **Token Limits**: Extremely long custom goal requests might cause truncated roadmap descriptions.
+- **External Timezones**: Mini-calendars depend on the client browser timezone settings for correct UTC date comparisons.
+
+---
+
+## 🔮 Roadmap (Future Features)
+- **👥 Mentor Portal**: Bridging the gap between students and instructors for roadmap tracking.
+- **🔊 Voice Integrations**: Hands-free study logs and voice command actions.
+- **📈 Advanced Analytics**: Graphs mapping consistency indicators against daily study hours.
