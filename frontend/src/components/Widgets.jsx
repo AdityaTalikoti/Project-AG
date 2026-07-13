@@ -2,7 +2,13 @@ import React from 'react';
 import { Sparkles, ChevronRight, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export default function Widgets({ upcomingTasks = [], aiInsight, isLoading }) {
+export default function Widgets({
+  upcomingTasks = [],
+  aiInsight,
+  isLoading,
+  insightLoading,
+  insightError
+}) {
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -20,6 +26,10 @@ export default function Widgets({ upcomingTasks = [], aiInsight, isLoading }) {
     return 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]';
   };
 
+  const displaySummary = (insightError || !aiInsight || !aiInsight.summary)
+    ? "Welcome back! Continue working toward your current goals. I'll generate personalized insights as more activity becomes available."
+    : aiInsight.summary;
+
   return (
     <div className="space-y-6">
       {/* AI Insight Card */}
@@ -31,11 +41,44 @@ export default function Widgets({ upcomingTasks = [], aiInsight, isLoading }) {
           <div className="flex items-center gap-2">
             <Sparkles className="text-purple-400" size={16} />
             <h3 className="text-xs font-bold text-purple-300 uppercase tracking-wider">AI Insight</h3>
-            <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wide">New</span>
+            {insightLoading ? (
+              <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wide animate-pulse">
+                Thinking...
+              </span>
+            ) : (insightError || !aiInsight || !aiInsight.summary) ? (
+              <span className="text-[9px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wide animate-pulse">
+                Fallback
+              </span>
+            ) : aiInsight?.cached ? (
+              <span className="text-[9px] bg-gray-500/20 text-gray-400 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wide">
+                Cached
+              </span>
+            ) : (
+              <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wide">
+                New
+              </span>
+            )}
           </div>
-          <p className="text-gray-300 text-xs leading-relaxed max-w-[200px]">
-            {aiInsight || "You've been consistent with Trees. Next logical step is Graphs. Try implementing BFS today."}
-          </p>
+
+          {insightLoading ? (
+            <div className="space-y-2 animate-pulse w-full max-w-[200px] py-1">
+              <div className="h-2.5 bg-purple-500/20 rounded w-11/12" />
+              <div className="h-2.5 bg-purple-500/20 rounded w-full" />
+              <div className="h-2.5 bg-purple-500/20 rounded w-4/5" />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <p className="text-gray-300 text-xs leading-relaxed max-w-[200px]">
+                {displaySummary}
+              </p>
+              {aiInsight?.generatedAt && !insightError && (
+                <p className="text-[9px] text-gray-500 font-medium">
+                  As of: {new Date(aiInsight.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="pt-1">
             <Link 
               to="/dashboard/mentor"

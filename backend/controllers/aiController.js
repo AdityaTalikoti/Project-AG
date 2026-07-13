@@ -1,5 +1,23 @@
 import { buildPrompt } from '../services/ai/promptBuilder.js';
 import { generateGeminiReply } from '../services/ai/geminiService.js';
+import { getOrGenerateInsight } from '../services/ai/dashboardInsightService.js';
+
+/**
+ * Controller to handle GET /api/ai/dashboard-insight requests.
+ * Checks cache and returns personalized AI-generated insight.
+ */
+export const handleDashboardInsight = async (req, res, next) => {
+  try {
+    const studentId = req.user?.id;
+    const clientTimezone = req.query.timezone || 'UTC';
+
+    const result = await getOrGenerateInsight(studentId, clientTimezone);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
 
 /**
  * Controller to handle POST /api/ai/chat requests.
