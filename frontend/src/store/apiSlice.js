@@ -136,6 +136,28 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['Event', 'DashboardStats'],
     }),
+    generateRoadmap: builder.mutation({
+      query: (roadmapData) => ({
+        url: 'roadmaps/generate',
+        method: 'POST',
+        body: roadmapData,
+      }),
+    }),
+    analyzeSuggestions: builder.mutation({
+      query: (editData) => ({
+        url: 'roadmaps/analyze-suggestions',
+        method: 'POST',
+        body: editData,
+      }),
+    }),
+    saveRoadmap: builder.mutation({
+      query: (customRoadmap) => ({
+        url: 'roadmaps/save',
+        method: 'POST',
+        body: customRoadmap,
+      }),
+      invalidatesTags: ['Event', 'DashboardStats'],
+    }),
   }),
 });
 
@@ -164,5 +186,10 @@ export const {
   
   // Roadmap Delete & Archive Mutations
   useDeleteActiveRoadmapMutation,
-  useArchiveActiveRoadmapMutation
+  useArchiveActiveRoadmapMutation,
+  
+  // Phase 7 AI Roadmap Mutations
+  useGenerateRoadmapMutation,
+  useAnalyzeSuggestionsMutation,
+  useSaveRoadmapMutation
 } = apiSlice;

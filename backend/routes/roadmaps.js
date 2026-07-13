@@ -2,6 +2,12 @@ import express from 'express';
 import authMiddleware from '../middleware/auth.js';
 import Roadmap from '../models/Roadmap.js';
 import Event from '../models/Event.js';
+import {
+  handleGenerateRoadmap,
+  handleAnalyzeSuggestions,
+  handleSaveRoadmap
+} from '../controllers/roadmapController.js';
+import { syncRoadmapToCalendar } from '../services/ai/roadmapSyncService.js';
 
 const router = express.Router();
 
@@ -343,58 +349,13 @@ router.get('/active', authMiddleware, async (req, res) => {
 });
 
 // 2. POST /api/roadmaps/generate
-router.post('/generate', authMiddleware, async (req, res) => {
-  try {
-    const studentId = req.user.id;
-    const { goal, skillLevel, timeline, dailyCommitment } = req.body;
+router.post('/generate', authMiddleware, handleGenerateRoadmap);
 
-    if (!goal) {
-      return res.status(400).json({ success: false, message: "Goal name is required" });
-    }
+// 2b. POST /api/roadmaps/analyze-suggestions
+router.post('/analyze-suggestions', authMiddleware, handleAnalyzeSuggestions);
 
-    // Set any existing roadmap to active: false to switch goals
-    await Roadmap.updateMany({ studentId }, { active: false });
-
-    // Deduce a matching category from the goal string
-    let category = 'Custom';
-    const normalizedGoal = goal.toLowerCase();
-    if (normalizedGoal.includes('mern') || normalizedGoal.includes('node') || normalizedGoal.includes('express')) {
-      category = 'MERN Stack';
-    } else if (normalizedGoal.includes('dsa') || normalizedGoal.includes('data structure') || normalizedGoal.includes('algorithm')) {
-      category = 'DSA';
-    } else if (normalizedGoal.includes('ai') || normalizedGoal.includes('machine learning') || normalizedGoal.includes('ml')) {
-      category = 'AI/ML';
-    } else if (normalizedGoal.includes('react')) {
-      category = 'React';
-    } else if (normalizedGoal.includes('full stack') || normalizedGoal.includes('fullstack') || normalizedGoal.includes('web development')) {
-      category = 'Full Stack Development';
-    } else if (normalizedGoal.includes('placement') || normalizedGoal.includes('interview') || normalizedGoal.includes('job prep')) {
-      category = 'Placement Preparation';
-    }
-
-    const modules = getPresetModules(category);
-
-    const newRoadmap = await Roadmap.create({
-      studentId,
-      title: goal,
-      description: `Modular learning pathway for ${goal}`,
-      category,
-      skillLevel: skillLevel || 'Beginner',
-      timeline: timeline || '4 weeks',
-      dailyCommitment: dailyCommitment || 60,
-      active: true,
-      modules,
-      completionPercentage: 0
-    });
-
-    res.status(201).json({
-      success: true,
-      data: newRoadmap
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+// 2c. POST /api/roadmaps/save
+router.post('/save', authMiddleware, handleSaveRoadmap);
 
 // 3. POST /api/roadmaps/tasks/toggle
 router.post('/tasks/toggle', authMiddleware, async (req, res) => {
@@ -543,82 +504,7 @@ router.post('/:id/sync', authMiddleware, async (req, res) => {
     const roadmapId = req.params.id;
     const studentId = req.user.id;
 
-    const roadmap = await Roadmap.findOne({ _id: roadmapId, studentId });
-    if (!roadmap) {
-      return res.status(404).json({ success: false, message: 'Roadmap not found' });
-    }
-
-    const existingEvents = await Event.find({ roadmapId, createdBy: studentId, isRoadmapEvent: true }).sort({ startDateTime: 1 });
-
-    const parseDurationToDays = (durationStr) => {
-      if (!durationStr) return 7;
-      const match = durationStr.match(/(\d+)\s*(day|week|month)/i);
-      if (!match) return 7;
-      const value = parseInt(match[1], 10);
-      const unit = match[2].toLowerCase();
-      if (unit.startsWith('day')) return value;
-      if (unit.startsWith('week')) return value * 7;
-      if (unit.startsWith('month')) return value * 30;
-      return 7;
-    };
-
-    let currentDate = new Date();
-    // Reset time to 09:00 for the start of the study blocks
-    currentDate.setHours(9, 0, 0, 0);
-
-    const modules = roadmap.modules;
-
-    for (let i = 0; i < modules.length; i++) {
-      const mod = modules[i];
-      const durationDays = parseDurationToDays(mod.estimatedDuration);
-
-      const startDateTime = new Date(currentDate);
-      const endDateTime = new Date(currentDate);
-      // End the event on the same day or duration days later (at 18:00)
-      endDateTime.setDate(startDateTime.getDate() + Math.max(0, durationDays - 1));
-      endDateTime.setHours(18, 0, 0, 0);
-
-      // Increment start date for the next module
-      currentDate.setDate(currentDate.getDate() + durationDays);
-
-      const expectedTitle = mod.title;
-      const expectedDescription = mod.description || '';
-
-      if (i < existingEvents.length) {
-        // Update existing event to preserve ID
-        const evt = existingEvents[i];
-        evt.title = expectedTitle;
-        evt.description = expectedDescription;
-        evt.startDateTime = startDateTime;
-        evt.endDateTime = endDateTime;
-        evt.category = roadmap.category || 'Study';
-        evt.color = '#8B5CF6'; // Violet color accent for roadmap syncs
-        evt.status = 'upcoming';
-        
-        await evt.save();
-      } else {
-        // Create new event
-        await Event.create({
-          title: expectedTitle,
-          description: expectedDescription,
-          startDateTime,
-          endDateTime,
-          category: roadmap.category || 'Study',
-          color: '#8B5CF6',
-          createdBy: studentId,
-          roadmapId,
-          isRoadmapEvent: true,
-          status: 'upcoming'
-        });
-      }
-    }
-
-    // Delete any trailing events (e.g. if modules count decreased)
-    if (existingEvents.length > modules.length) {
-      const eventsToDelete = existingEvents.slice(modules.length);
-      const idsToDelete = eventsToDelete.map(e => e._id);
-      await Event.deleteMany({ _id: { $in: idsToDelete } });
-    }
+    await syncRoadmapToCalendar(roadmapId, studentId);
 
     res.json({
       success: true,
