@@ -6,6 +6,7 @@ import { buildJournalContext } from './journalContextBuilder.js';
 /**
  * Builds the context string for the authenticated student.
  * Gathers active goals, roadmaps, calendar events, and summarized journals.
+ *
  * @param {string} studentId - The ID of the authenticated user.
  * @returns {Promise<string>} - The context text to append to the system prompt.
  */
@@ -15,30 +16,27 @@ export const buildContext = async (studentId) => {
   }
 
   try {
-    // 1. Fetch User Goals (Active)
-    const activeGoal = await Goal.findOne({ studentId, status: 'Active' })
-      .select('title description subTasks')
-      .lean();
-
-    // 2. Fetch Active Roadmap
-    const activeRoadmap = await Roadmap.findOne({ studentId, active: true })
-      .select('title completionPercentage modules')
-      .lean();
-
-    // 3. Fetch Calendar Events (Not in the past)
     const now = new Date();
-    const futureEvents = await Event.find({
-      createdBy: studentId,
-      endDateTime: { $gte: now },
-      status: { $ne: 'cancelled' }
-    })
-      .select('title description startDateTime endDateTime category')
-      .sort({ startDateTime: 1 })
-      .lean();
+
+    // Parallelize context data fetching
+    const [activeGoal, activeRoadmap, futureEvents, journalContext] = await Promise.all([
+      Goal.findOne({ studentId, status: 'Active' }).select('title description subTasks').lean(),
+      Roadmap.findOne({ studentId, active: true }).select('title completionPercentage skillLevel modules').lean(),
+      Event.find({
+        createdBy: studentId,
+        endDateTime: { $gte: now },
+        status: { $ne: 'cancelled' }
+      })
+        .select('title startDateTime category')
+        .sort({ startDateTime: 1 })
+        .limit(10) // Fetch next 10 candidates to sort and filter locally
+        .lean(),
+      buildJournalContext(studentId)
+    ]);
 
     let context = '### STUDENT CONTEXT\n\n';
 
-    // Format Goals
+    // 1. Format Goals
     if (activeGoal) {
       context += `**Active Learning Goal**: ${activeGoal.title}\n`;
       if (activeGoal.description) {
@@ -53,9 +51,9 @@ export const buildContext = async (studentId) => {
       context += `**Active Learning Goal**: None configured.\n\n`;
     }
 
-    // Format Roadmap
+    // 2. Format Roadmap (Compressed)
     if (activeRoadmap) {
-      context += `**Active Roadmap**: ${activeRoadmap.title} (${activeRoadmap.completionPercentage}% Completed)\n`;
+      context += `**Active Roadmap**: ${activeRoadmap.title} (${activeRoadmap.completionPercentage}% Completed, Skill Level: ${activeRoadmap.skillLevel || 'Beginner'})\n`;
       
       const modules = activeRoadmap.modules || [];
       const currentMilestone = modules.find(m => m.status === 'in-progress');
@@ -69,18 +67,20 @@ export const buildContext = async (studentId) => {
         context += `- Completed Milestones: ${completedMilestones.map(m => m.title).join(', ')}\n`;
       }
       if (pendingMilestones.length > 0) {
-        context += `- Upcoming/Pending Milestones: ${pendingMilestones.map(m => m.title).join(', ')}\n`;
+        // Compress: Show next 2 pending milestones and count the rest
+        const nextTwo = pendingMilestones.slice(0, 2).map(m => m.title).join(', ');
+        const remaining = pendingMilestones.length - 2;
+        context += `- Next Milestones: ${nextTwo}${remaining > 0 ? ` (+${remaining} more)` : ''}\n`;
       }
       context += '\n';
     } else {
       context += `**Active Roadmap**: None configured.\n\n`;
     }
 
-    // Format Calendar Events
+    // 3. Format Calendar Events (Compressed to max 3 upcoming)
     if (futureEvents && futureEvents.length > 0) {
       context += `**Calendar & Schedule**:\n`;
       
-      // Separate today's events from upcoming ones
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
@@ -97,14 +97,16 @@ export const buildContext = async (studentId) => {
       });
 
       if (todayEvents.length > 0) {
-        context += `Today's Events:\n` + todayEvents.map(evt => {
+        context += `Today's Events:\n` + todayEvents.slice(0, 3).map(evt => {
           const time = new Date(evt.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           return `- [${evt.category || 'General'}] ${evt.title} at ${time}`;
         }).join('\n') + '\n';
       }
 
       if (upcomingEvents.length > 0) {
-        context += `Upcoming Schedule & Deadlines:\n` + upcomingEvents.map(evt => {
+        // Compress: Only send next 3 upcoming events
+        const limitedUpcoming = upcomingEvents.slice(0, 3);
+        context += `Upcoming Schedule & Deadlines:\n` + limitedUpcoming.map(evt => {
           const dateStr = new Date(evt.startDateTime).toLocaleDateString([], { month: 'short', day: 'numeric' });
           const timeStr = new Date(evt.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           return `- [${evt.category || 'General'}] ${evt.title} on ${dateStr} at ${timeStr}`;
@@ -115,8 +117,7 @@ export const buildContext = async (studentId) => {
       context += `**Calendar & Schedule**: No upcoming events or deadlines scheduled.\n\n`;
     }
 
-    // 4. Fetch and Append Summarized Journal Context (Phase 5)
-    const journalContext = await buildJournalContext(studentId);
+    // 4. Append Local Journal Summary
     if (journalContext) {
       context += journalContext;
     }
@@ -124,7 +125,6 @@ export const buildContext = async (studentId) => {
     return context;
   } catch (error) {
     console.error('Error gathering student context:', error);
-    // Gracefully fallback to empty or error context description to not break the chatbot
     return '### STUDENT CONTEXT\nNote: Temporary error retrieving student context.\n\n';
   }
 };

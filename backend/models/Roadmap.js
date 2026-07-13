@@ -17,7 +17,7 @@ const moduleSchema = new mongoose.Schema({
 });
 
 const roadmapSchema = new mongoose.Schema({
-  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   title: { type: String, required: true },
   description: { type: String },
   category: { type: String, required: true },

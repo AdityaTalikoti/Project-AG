@@ -46,10 +46,12 @@ export const computeSourceVersion = async (userId, timezone = 'UTC') => {
     }
   };
 
-  const goalsKey = await getStats(Goal, { studentId: userId });
-  const roadmapsKey = await getStats(Roadmap, { studentId: userId });
-  const eventsKey = await getStats(Event, { createdBy: userId });
-  const journalsKey = await getStats(Journal, { studentId: userId });
+  const [goalsKey, roadmapsKey, eventsKey, journalsKey] = await Promise.all([
+    getStats(Goal, { studentId: userId }),
+    getStats(Roadmap, { studentId: userId }),
+    getStats(Event, { createdBy: userId }),
+    getStats(Journal, { studentId: userId })
+  ]);
 
   return `${dateStr}|goals:${goalsKey}|roadmaps:${roadmapsKey}|events:${eventsKey}|journals:${journalsKey}`;
 };
