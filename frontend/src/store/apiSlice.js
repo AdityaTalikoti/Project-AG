@@ -19,6 +19,13 @@ export const apiSlice = createApi({
       },
       providesTags: ['DashboardStats'],
     }),
+    getDashboardInsight: builder.query({
+      query: () => {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return `ai/dashboard-insight?timezone=${encodeURIComponent(timezone)}`;
+      },
+      providesTags: ['DashboardStats'],
+    }),
     getActiveGoal: builder.query({
       query: () => `goals/active`,
     }),
@@ -135,6 +142,7 @@ export const apiSlice = createApi({
 export const { 
   useGetJournalsQuery, 
   useGetDashboardStatsQuery, 
+  useGetDashboardInsightQuery,
   useGetActiveGoalQuery, 
   useAddJournalMutation,
   useAddFocusSessionMutation,

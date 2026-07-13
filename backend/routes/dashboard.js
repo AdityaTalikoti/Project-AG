@@ -146,16 +146,8 @@ router.get('/stats', authMiddleware, async (req, res) => {
       prevDate = currDate;
     }
 
-    // AI Insight based on their real recent progress
-    let aiInsight = "You haven't logged any journals yet. Start your journey by writing your first journal entry!";
-    if (journals.length > 0) {
-      const lastJournal = journals[0]; // sorted by newest
-      if (lastJournal.aiFeedback?.match) {
-        aiInsight = `Great job on your last task: "${lastJournal.task}". Your conceptual understanding was excellent. Try to keep this momentum!`;
-      } else {
-        aiInsight = `For your last task "${lastJournal.task}", the AI recommended: "${lastJournal.aiFeedback?.feedback}". Take a look at it to deepen your understanding.`;
-      }
-    }
+    // AI Insight has been moved to a dedicated endpoint GET /api/ai/dashboard-insight (Phase 6)
+    const aiInsight = null;
 
     // Calculate weekly progress focus hours for the last 7 days dynamically
     // Combine 3 hours per journal entry with actual Focus Sessions

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import { useGetDashboardStatsQuery, useGetActiveGoalQuery, useGetEventsQuery } from '../store/apiSlice';
+import { useGetDashboardStatsQuery, useGetDashboardInsightQuery, useGetActiveGoalQuery, useGetEventsQuery } from '../store/apiSlice';
 import HeroCTA from '../components/HeroCTA';
 import WeeklyProgress from '../components/WeeklyProgress';
 import Widgets from '../components/Widgets';
@@ -34,6 +34,7 @@ export default function Home() {
   const { data: statsData, isLoading: statsLoading } = useGetDashboardStatsQuery();
   const { data: goalData, isLoading: goalLoading } = useGetActiveGoalQuery();
   const { data: eventsData, isLoading: eventsLoading, refetch: refetchEvents } = useGetEventsQuery();
+  const { data: insightData, isLoading: insightLoading, isError: insightError } = useGetDashboardInsightQuery();
 
   const isLoading = statsLoading || goalLoading || eventsLoading;
   const stats = statsData?.data || {};
@@ -533,8 +534,10 @@ export default function Home() {
 
           <Widgets 
             upcomingTasks={stats.upcomingTasks}
-            aiInsight={stats.aiInsight}
-            isLoading={isLoading} 
+            aiInsight={insightData}
+            isLoading={isLoading}
+            insightLoading={insightLoading}
+            insightError={insightError}
           />
         </div>
       </div>
