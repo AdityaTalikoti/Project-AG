@@ -6,7 +6,7 @@ export const apiSlice = createApi({
     baseUrl: '/api/',
     credentials: 'include'
   }),
-  tagTypes: ['Journal', 'DashboardStats', 'Event'],
+  tagTypes: ['Journal', 'DashboardStats', 'Event', 'StudyPlan'],
   endpoints: (builder) => ({
     getJournals: builder.query({
       query: (studentId) => `journal/${studentId}`,
@@ -158,6 +158,33 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['Event', 'DashboardStats'],
     }),
+    getStudyPlan: builder.query({
+      query: (date) => date ? `ai/study-plan?date=${date}` : 'ai/study-plan',
+      providesTags: ['StudyPlan'],
+    }),
+    regenerateStudyPlan: builder.mutation({
+      query: () => ({
+        url: 'ai/regenerate-study-plan',
+        method: 'POST',
+      }),
+      invalidatesTags: ['StudyPlan'],
+    }),
+    toggleStudyPlanTask: builder.mutation({
+      query: (taskData) => ({
+        url: 'ai/study-plan/task/toggle',
+        method: 'POST',
+        body: taskData,
+      }),
+      invalidatesTags: ['StudyPlan'],
+    }),
+    rescheduleMilestone: builder.mutation({
+      query: (rescheduleData) => ({
+        url: 'ai/study-plan/reschedule',
+        method: 'POST',
+        body: rescheduleData,
+      }),
+      invalidatesTags: ['StudyPlan', 'Event'],
+    }),
   }),
 });
 
@@ -191,5 +218,11 @@ export const {
   // Phase 7 AI Roadmap Mutations
   useGenerateRoadmapMutation,
   useAnalyzeSuggestionsMutation,
-  useSaveRoadmapMutation
+  useSaveRoadmapMutation,
+
+  // Phase 8 AI Study Planner Hooks
+  useGetStudyPlanQuery,
+  useRegenerateStudyPlanMutation,
+  useToggleStudyPlanTaskMutation,
+  useRescheduleMilestoneMutation
 } = apiSlice;
