@@ -5,6 +5,7 @@ import { useGetDashboardStatsQuery, useGetDashboardInsightQuery, useGetActiveGoa
 import HeroCTA from '../components/HeroCTA';
 import WeeklyProgress from '../components/WeeklyProgress';
 import Widgets from '../components/Widgets';
+import StudyPlanner from '../components/ai/StudyPlanner';
 import QuickCreateEventModal from '../components/QuickCreateEventModal';
 import { 
   Flame, Clock, CheckCircle, Zap, Play,
@@ -531,6 +532,8 @@ export default function Home() {
           </div>
 
 
+
+          <StudyPlanner />
 
           <Widgets 
             upcomingTasks={stats.upcomingTasks}
