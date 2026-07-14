@@ -1,180 +1,222 @@
-# 🎓 ScholarSync v1.0 (Production Release)
+# 🎓 ScholarSync --- AI Powered Student Productivity Platform
 
-ScholarSync is a next-generation, gamified learning helper and study planner platform designed to keep students consistent, focused, and organized. Built on a modern MERN tech stack, it features personalized AI-driven roadmaps, dynamic study planners, daily journaling evaluations, focus session timers, and calendar sync.
+> 🚀 **Production Release v1.0**
 
----
+ScholarSync is an AI-powered MERN platform that helps students stay
+consistent, organized, and productive through personalized learning
+roadmaps, AI mentoring, smart study planning, journaling, calendar
+synchronization, and analytics.
 
-## 🚀 Core Features
+------------------------------------------------------------------------
 
-### 1. 🎯 Dynamic AI Onboarding & Smart Roadmaps (Phases 7 & 8)
-- **AI Interview Wizard**: Step-by-step onboarding collects learning goals, commitments, styles, and background context to build custom curricula.
-- **Milestones Editor (CRUD)**: Fully interactive pathway screen supporting rename, deletion, additions, and positional reordering (Up/Down arrow shifts) before saving.
-- **Calendar Synchronization**: Automatically coordinates roadmap modules with Calendar Events. Checks and prevents duplicate schedules.
-- **Smart AI Recommendations**: Side analyst reviews milestones for sequencing issues (e.g. learning advanced tools before prerequisites) and workload alignment.
+## 🌐 Live Demo
 
-### 2. 📊 AI Daily Study Planner (Phase 8)
-- **Adaptive Scheduling**: Auto-generates a daily list of study tasks compiled from active roadmaps, today's schedule, and recent journal mood logs.
-- **Load Adjustments**: Scales tasks down when today's calendar is "Busy" (>= 3 events or >= 3 hours). Suggests revision, LeetCode, or mock interviews if the student is ahead.
-- **Missed Milestones Recovery**: Recommends rescheduling missed modules. Accepting the prompt automatically updates the calendar event to the next available date.
-- **Cached Operations**: Generates one plan per day, caching results normalized to local midnights, with support for historical date-browsing navigation.
+-   **Frontend:** https://scholar-sync-brown.vercel.app/
+-   **Backend Health:**
+    https://scholar-sync-backend-6f31.onrender.com/api/health
 
-### 3. 📝 Journaling & AI Feedback (Phase 5)
-- **Reflections Log**: Track daily milestones, approaches, and ideas.
-- **Gamified Level Ups**: Earn XP from completed tasks, focus sessions, and journal entries. Profile titles automatically adjust depending on the user's active goal track (e.g. `DSA Explorer`, `MERN Stack Scholar`).
+------------------------------------------------------------------------
 
-### 4. ⏱️ Focus Pomodoro Timer
-- Visual Pomodoro blocks (Coding, Theory, Revision, Mock Test) with custom session targets.
-- Earn XP rewards automatically saved directly to the database.
+## 🛠 Tech Stack
 
----
+### Frontend
 
-## 📐 AI System Architecture
+-   React 19
+-   Vite
+-   Redux Toolkit (RTK Query)
+-   React Router
+-   Tailwind CSS
+-   Recharts
+-   Lucide React
 
-ScholarSync uses a robust, optimized pipeline to handle AI interactions cleanly and cost-effectively:
+### Backend
 
-```mermaid
+-   Node.js
+-   Express.js
+-   MongoDB Atlas
+-   Mongoose
+-   JWT Authentication
+-   Google OAuth 2.0
+
+### AI
+
+-   Google Gemini
+-   Prompt Engineering
+-   AI Context Builder
+-   AI Cache Layer
+-   Rule-based Offline Fallback
+
+### Deployment
+
+-   Vercel
+-   Render
+-   MongoDB Atlas
+
+------------------------------------------------------------------------
+
+# ✨ Features
+
+## 🤖 AI Mentor
+
+-   Context-aware chatbot
+-   Personalized learning guidance
+-   Secure prompt handling
+
+## 🗺 AI Roadmap Generator
+
+-   Multi-step interview wizard
+-   AI-generated personalized roadmap
+-   Smart roadmap editor
+-   Calendar synchronization
+-   AI suggestions panel
+
+## 📊 AI Dashboard Intelligence
+
+-   Personalized dashboard insights
+-   Cached responses
+-   Automatic regeneration after progress updates
+
+## 📅 AI Smart Study Planner
+
+-   Daily study plans
+-   Workload balancing
+-   Missed milestone recovery
+-   Calendar rescheduling
+-   Daily cache
+
+## 📝 Journal Evaluation
+
+-   AI feedback
+-   Reflection tracking
+-   XP rewards
+
+## ⏱ Focus Timer
+
+-   Pomodoro sessions
+-   XP tracking
+
+------------------------------------------------------------------------
+
+# 🧠 AI Architecture
+
+``` mermaid
 graph TD
-    subgraph Client [Vite React App]
-        Home[Dashboard UI]
-        Roadmap[Roadmap Editor]
-        Planner[Study Planner Widget]
-    end
-
-    subgraph BackendAPI [Express Router & Controller]
-        Controller[studyPlanController / roadmapController]
-        Context[studyPlanContextBuilder / contextBuilder]
-        Validator[studyPlanValidator / roadmapValidator]
-    end
-
-    subgraph AIConnector [AI Service Engine]
-        Gemini[Google Gemini API]
-        Fallback[Local Rule-Based Fallback]
-    end
-
-    subgraph DataStore [MongoDB Cache]
-        DB[(Roadmaps, Events, Journals, StudyPlans)]
-    end
-
-    Client -->|API Requests| Controller
-    Controller -->|Compile Context| Context
-    Context -->|Parallel Promise.all Query| DB
-    Context -->|Enriched Prompt| Gemini
-    Gemini -->|Raw Response JSON| Validator
-    Validator -->|Sanitize & Clean JSON| Controller
-    AIConnector -->|On Error / No Key| Fallback
-    Fallback -->|Deterministic Plan| Controller
-    Controller -->|Cache Save| DB
-    Controller -->|JSON Response| Client
+A[React Frontend] --> B[Express API]
+B --> C[Context Builder]
+C --> D[Google Gemini]
+C --> E[Fallback Engine]
+D --> F[Validators]
+E --> F
+F --> G[(MongoDB Cache)]
+G --> A
 ```
 
-### Key AI Performance Optimizations:
-- **Single Gemini call per message**: The journal context summary is generated locally in Node.js rather than calling a separate Gemini summarization step.
-- **Parallelized Queries**: Uses `Promise.all` inside `computeSourceVersion` and `buildStudyPlanContext` to run Database stats checks concurrently, reducing page load latencies by up to 75%.
-- **Foreign Key Indexing**: Added database indexes to `studentId` fields in `Goal` and `Roadmap` collections.
-- **Offline Reliability Fallbacks**: If Gemini is down or key is de-configured, a local rule-based scheduler maps active module tasks to the daily plan, keeping the app usable.
+# ☁️ Deployment
 
----
-
-## 📂 Folder Structure
-
-```text
-ScholarSync/
-├── backend/
-│   ├── controllers/      # Thin controller layer managing request/response mapping
-│   │   ├── aiController.js
-│   │   ├── roadmapController.js
-│   │   └── studyPlanController.js
-│   ├── models/           # Mongoose schemas (User, Goal, Roadmap, Event, Journal, StudyPlan)
-│   ├── routes/           # Express API routers (auth, dashboard, events, journals, roadmaps, aiRoutes)
-│   ├── services/
-│   │   └── ai/           # Dedicated AI services
-│   │       ├── contextBuilder.js
-│   │       ├── geminiService.js
-│   │       ├── insightCacheService.js
-│   │       ├── journalContextBuilder.js
-│   │       ├── roadmapGeneratorService.js
-│   │       ├── roadmapSuggestionService.js
-│   │       ├── roadmapValidator.js
-│   │       ├── studyPlanContextBuilder.js
-│   │       └── studyPlannerService.js
-│   └── index.js          # Express entry point
-└── frontend/
-    ├── src/
-    │   ├── components/
-    │   │   └── ai/       # ChatWindow, ChatInput, StudyPlanner widgets
-    │   ├── pages/        # Dashboard Home, Roadmaps page, AI Mentor page
-    │   └── store/
-    │       └── apiSlice.js # RTK Query mutations and tags definition
+``` mermaid
+graph LR
+User --> V[Vercel Frontend]
+V --> R[Render Backend]
+R --> M[(MongoDB Atlas)]
+R --> G[Google Gemini]
+R --> O[Google OAuth]
 ```
 
----
+# 🔐 Authentication Flow
 
-## ⚙️ Project Setup
+``` mermaid
+sequenceDiagram
+User->>Frontend: Continue with Google
+Frontend->>Backend: OAuth Request
+Backend->>Google: Exchange Code
+Google-->>Backend: User Profile
+Backend->>MongoDB: Find/Create User
+Backend-->>Frontend: JWT Cookie
+Frontend->>Dashboard: Authenticated Access
+```
 
-### Prerequisites
-- **Node.js**: v18+ installed.
-- **MongoDB**: Atlas cluster connection string or local database instance running.
-- **Gemini API Key**: Retrieve a free key from [Google AI Studio](https://aistudio.google.com/).
+# 🚀 Development Timeline
 
-### Installation
+-   ✅ Phase 1 -- AI Foundation
+-   ✅ Phase 2 -- Prompt Architecture
+-   ✅ Phase 3 -- AI Mentor
+-   ✅ Phase 4 -- Context Builder
+-   ✅ Phase 5 -- AI Journal Evaluation
+-   ✅ Phase 6 -- Dashboard Intelligence
+-   ✅ Phase 7 -- AI Roadmap Generator
+-   ✅ Phase 8 -- Smart Study Planner
+-   ✅ Phase 9 -- Production Optimization & Deployment
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/AdityaTalikoti/Project-AG.git
-   cd Project-AG
-   ```
+# 📂 Project Structure
 
-2. **Configure Environment Variables**:
-   Create a `.env` file in the `backend/` directory:
-   ```env
-   PORT=8080
-   MONGODB_URI=your_mongodb_connection_string
-   JWT_SECRET=your_jwt_secret_key
-   FRONTEND_URL=http://localhost:5173
-   GOOGLE_CLIENT_ID=your_google_client_id
-   GOOGLE_CLIENT_SECRET=your_google_client_secret
-   GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
-   GEMINI_API_KEY=your_google_gemini_api_key
-   NODE_ENV=development
-   ```
+``` text
+ScholarSync
+├── backend
+│   ├── controllers
+│   ├── middleware
+│   ├── models
+│   ├── routes
+│   ├── services
+│   └── index.js
+└── frontend
+    ├── components
+    ├── pages
+    ├── store
+    └── assets
+```
 
-3. **Install Dependencies**:
-   ```bash
-   # Install Backend dependencies
-   cd backend
-   npm install
+# ⚙️ Environment Variables
 
-   # Install Frontend dependencies
-   cd ../frontend
-   npm install
-   ```
+  Variable               Description
+  ---------------------- --------------------
+  MONGODB_URI            MongoDB connection
+  JWT_SECRET             JWT secret
+  GEMINI_API_KEY         Gemini API
+  FRONTEND_URL           Frontend URL
+  GOOGLE_CLIENT_ID       OAuth client
+  GOOGLE_CLIENT_SECRET   OAuth secret
+  GOOGLE_REDIRECT_URI    OAuth callback
 
-4. **Start the Application**:
-   ```bash
-   # Start backend server (from backend directory)
-   npm start
+# ⚡ Production Optimizations
 
-   # Start frontend vite server (from frontend directory)
-   npm run dev
-   ```
-   Open `http://localhost:5173` in your browser.
+-   Parallel database queries
+-   AI response caching
+-   MongoDB indexing
+-   Prompt optimization
+-   Graceful fallback
+-   Secure cookies
+-   Dynamic OAuth redirects
+-   Production CORS
 
----
+# 🛡 Security
 
-## 🛡️ Security & Validations
-- **Input Sanitization**: Incoming user chatbot messages are cleaned via script-tag stripping and HTML tags removal to block injections.
-- **API Response Isolation**: Database lookups are strictly bound to `req.user.id` to guarantee students only access their own roadmaps, plans, and events.
-- **Safe Fallbacks**: Catch-blocks on all Gemini operations return in-character status reports (e.g. rate limit notifications) instead of crash errors, preserving client usability.
+-   JWT Authentication
+-   HTTP-only Cookies
+-   Google OAuth
+-   Input sanitization
+-   Protected API routes
 
----
+# 🔮 Future Roadmap
 
-## ⚠️ Known Limitations
-- **Token Limits**: Extremely long custom goal requests might cause truncated roadmap descriptions.
-- **External Timezones**: Mini-calendars depend on the client browser timezone settings for correct UTC date comparisons.
+-   Mentor Portal
+-   Voice AI
+-   Mobile App
+-   Team Study Rooms
+-   Weekly Analytics
+-   Push Notifications
 
----
+# 👨‍💻 Author
 
-## 🔮 Roadmap (Future Features)
-- **👥 Mentor Portal**: Bridging the gap between students and instructors for roadmap tracking.
-- **🔊 Voice Integrations**: Hands-free study logs and voice command actions.
-- **📈 Advanced Analytics**: Graphs mapping consistency indicators against daily study hours.
+**Aditya Talikoti**
+
+B.Tech CSE (Cloud Computing)
+
+MIT ADT University
+
+GitHub: https://github.com/AdityaTalikoti
+
+------------------------------------------------------------------------
+
+## 📄 License
+
+MIT License
