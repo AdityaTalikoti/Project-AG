@@ -10,6 +10,7 @@ export default function GoogleButton() {
       `${import.meta.env.VITE_API_URL}/api/auth/google/callback`;
 
     const scope = "profile email";
+    const state = encodeURIComponent(window.location.origin);
 
     const authUrl =
       "https://accounts.google.com/o/oauth2/v2/auth" +
@@ -18,7 +19,8 @@ export default function GoogleButton() {
       `&response_type=code` +
       `&scope=${encodeURIComponent(scope)}` +
       `&access_type=offline` +
-      `&prompt=consent`;
+      `&prompt=consent` +
+      `&state=${state}`;
 
     window.location.href = authUrl;
   };

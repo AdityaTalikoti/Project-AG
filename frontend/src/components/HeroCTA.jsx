@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Compass, Target } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) {
   const [goalName, setGoalName] = useState('MERN Stack');
   const [customGoal, setCustomGoal] = useState('');
@@ -15,9 +17,10 @@ export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) 
     setGenerating(true);
     try {
       const selectedGoal = goalName === 'Custom' ? customGoal : goalName;
-      const res = await fetch('/api/roadmaps/generate', {
+      const res = await fetch(`${API_BASE}/api/roadmaps/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           goal: selectedGoal,
           skillLevel,

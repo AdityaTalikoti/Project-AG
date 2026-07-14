@@ -8,6 +8,8 @@ import OtpInput from '../components/auth/OtpInput';
 import GoogleButton from '../components/auth/GoogleButton';
 import './Auth.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 // ── Validation helpers ──
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const pwRegex = /^(?=.*[A-Z])(?=.*[$@!%*?&]).{8,}$/;
@@ -83,7 +85,7 @@ function SignUpView({ onSwitch, initialEmail = '' }) {
     setLoading(true);
     setBanner('');
     try {
-      const res = await fetch('/api/auth/signup', {
+      const res = await fetch(`${API_BASE}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -175,7 +177,7 @@ function SignInView({ onSwitch, onForgot, onNeedPassword }) {
     setLoading(true);
     setBanner('');
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

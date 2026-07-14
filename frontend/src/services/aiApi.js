@@ -7,13 +7,16 @@
  * @param {string} message - The student's message.
  * @returns {Promise<{success: boolean, reply?: string, message?: string}>}
  */
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export const sendChatMessage = async (message) => {
   try {
-    const response = await fetch('/api/ai/chat', {
+    const response = await fetch(`${API_BASE}/api/ai/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ message }),
     });
 

@@ -8,10 +8,12 @@ import authMiddleware from '../middleware/auth.js';
 const router = express.Router();
 
 // ── Cookie config ──
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
@@ -145,8 +147,37 @@ router.post('/login', async (req, res) => {
 // Google OAuth Callback
 // ==============================
 router.get('/google/callback', async (req, res) => {
-  const { code } = req.query;
+  const { code, state } = req.query;
   if (!code) return res.status(400).json({ message: 'No authorization code received' });
+
+  // 1. Determine redirect URI for code exchange dynamically or from env
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+
+  // 2. Determine target frontend URL for browser redirect
+  let targetFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
+  if (state) {
+    try {
+      const decodedState = decodeURIComponent(state);
+      const parsedStateUrl = new URL(decodedState);
+      const stateHost = parsedStateUrl.hostname;
+      const allowedHosts = ['localhost', '127.0.0.1'];
+      if (process.env.FRONTEND_URL) {
+        try {
+          allowedHosts.push(new URL(process.env.FRONTEND_URL).hostname);
+        } catch (_) {}
+      }
+      // Allow localhost, the configured FRONTEND_URL host, or any vercel.app domains
+      const isAllowed = allowedHosts.includes(stateHost) || stateHost.endsWith('.vercel.app');
+      if (isAllowed) {
+        targetFrontendUrl = parsedStateUrl.origin;
+      }
+    } catch (e) {
+      console.error('Invalid state URL in OAuth callback:', e.message);
+    }
+  }
+
+  // Clean up targetFrontendUrl to prevent path double-redirects
+  targetFrontendUrl = targetFrontendUrl.replace(/\/$/, '').replace(/\/auth$/, '');
 
   try {
     // 1️⃣ Exchange code → access token
@@ -154,7 +185,7 @@ router.get('/google/callback', async (req, res) => {
       client_id: process.env.GOOGLE_CLIENT_ID,
       client_secret: process.env.GOOGLE_CLIENT_SECRET,
       code,
-      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+      redirect_uri: redirectUri,
       grant_type: 'authorization_code',
     });
 
@@ -182,11 +213,11 @@ router.get('/google/callback', async (req, res) => {
     // 4️⃣ Set JWT in HTTP-only cookie and redirect
     const token = signToken(user);
     res.cookie('token', token, cookieOptions);
-    res.redirect(process.env.FRONTEND_URL + '/dashboard');
+    res.redirect(`${targetFrontendUrl}/dashboard`);
 
   } catch (error) {
     console.error('Google OAuth error:', error.response?.data || error.message);
-    res.redirect(process.env.FRONTEND_URL + '/auth?error=oauth_failed');
+    res.redirect(`${targetFrontendUrl}/auth?error=oauth_failed`);
   }
 });
 
@@ -229,10 +260,11 @@ router.get('/me', authMiddleware, async (req, res) => {
 // Logout — clear cookie
 // ==============================
 router.post('/logout', (req, res) => {
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
   res.clearCookie('token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
   });
   res.json({ message: 'Logged out' });
 });

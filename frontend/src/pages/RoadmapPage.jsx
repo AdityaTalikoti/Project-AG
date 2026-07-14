@@ -16,6 +16,8 @@ import {
   useSaveRoadmapMutation
 } from '../store/apiSlice';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export default function RoadmapPage() {
   const navigate = useNavigate();
   const [roadmap, setRoadmap] = useState(null);
@@ -81,7 +83,7 @@ export default function RoadmapPage() {
 
   const fetchActiveRoadmap = async () => {
     try {
-      const res = await fetch('/api/roadmaps/active');
+      const res = await fetch(`${API_BASE}/api/roadmaps/active`, { credentials: 'include' });
       const json = await res.json();
       if (json.success && json.data) {
         setRoadmap(json.data);
@@ -140,9 +142,10 @@ export default function RoadmapPage() {
       });
       setRoadmap({ ...roadmap, modules: updatedModules });
 
-      const res = await fetch('/api/roadmaps/tasks/toggle', {
+      const res = await fetch(`${API_BASE}/api/roadmaps/tasks/toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           roadmapId: roadmap._id,
           taskId,
