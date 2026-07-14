@@ -3,8 +3,6 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/auth.js';
 import journalRoutes from './routes/journal.js';
@@ -21,15 +19,22 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ── Middleware ──
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true,
-}));
+// ─────────────────────────────────────────────
+// Middleware
+// ─────────────────────────────────────────────
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(cookieParser());
 
-// ── API Routes ──
+// ─────────────────────────────────────────────
+// API Routes
+// ─────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/journal', journalRoutes);
 app.use('/api/dashboard', dashboardRoutes);
@@ -39,33 +44,53 @@ app.use('/api/roadmaps', roadmapRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/ai', aiRoutes);
 
-// ── Health Check ──
+// ─────────────────────────────────────────────
+// Health Check
+// ─────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'ScholarSync API is running' });
+  res.status(200).json({
+    status: 'ok',
+    message: 'ScholarSync API is running',
+  });
 });
 
-// ── Static frontend serving (production) ──
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-// SPA catch-all — serves index.html for non-API GET requests
-app.use((req, res, next) => {
-  if (req.method === 'GET' && !req.path.startsWith('/api')) {
-    return res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-  }
-  next();
+// ─────────────────────────────────────────────
+// Root Route
+// ─────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: '🚀 ScholarSync Backend API is running successfully!',
+    version: '1.0.0',
+  });
 });
 
-// ── Centralized Error Handler Middleware ──
+// ─────────────────────────────────────────────
+// 404 Handler (for unknown API routes)
+// ─────────────────────────────────────────────
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'API endpoint not found',
+  });
+});
+
+// ─────────────────────────────────────────────
+// Global Error Handler
+// ─────────────────────────────────────────────
 app.use(errorHandler);
 
-// ── MongoDB + Server Start ──
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/scholarsync';
+// ─────────────────────────────────────────────
+// Database Connection
+// ─────────────────────────────────────────────
+const MONGODB_URI =
+  process.env.MONGODB_URI || 'mongodb://localhost:27017/scholarsync';
 
 mongoose
   .connect(MONGODB_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB');
+
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
