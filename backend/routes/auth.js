@@ -13,9 +13,15 @@ const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER
 const cookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? 'none' : 'lax',
+  sameSite: 'lax', // Lax is the secure industry standard for same-site/same-origin architectures
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
+
+// If custom domains share same registrable domain (e.g. app.domain.com and api.domain.com),
+// set COOKIE_DOMAIN=.domain.com in environment variables.
+if (isProduction && process.env.COOKIE_DOMAIN) {
+  cookieOptions.domain = process.env.COOKIE_DOMAIN;
+}
 
 // ── Helper: generate JWT ──
 function signToken(user) {
@@ -210,14 +216,43 @@ router.get('/google/callback', async (req, res) => {
       await user.save();
     }
 
-    // 4️⃣ Set JWT in HTTP-only cookie and redirect
+    // 4️⃣ Set JWT cookie directly and redirect to frontend home
     const token = signToken(user);
     res.cookie('token', token, cookieOptions);
-    res.redirect(`${targetFrontendUrl}/dashboard`);
+    res.redirect(targetFrontendUrl);
 
   } catch (error) {
     console.error('Google OAuth error:', error.response?.data || error.message);
     res.redirect(`${targetFrontendUrl}/auth?error=oauth_failed`);
+  }
+});
+
+// ==============================
+// Set Cookie (for Google OAuth callback redirection via AJAX)
+// ==============================
+router.post('/set-cookie', async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
+
+    // Verify token validity
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-__v');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Safely write HTTP-only cookie in direct AJAX POST context
+    res.cookie('token', token, cookieOptions);
+    res.json({
+      success: true,
+      user: { _id: user._id, name: user.name, email: user.email, picture: user.picture, phone: user.phone }
+    });
+  } catch (error) {
+    console.error('Set cookie error:', error.message);
+    res.status(401).json({ message: 'Invalid or expired token' });
   }
 });
 
@@ -261,11 +296,15 @@ router.get('/me', authMiddleware, async (req, res) => {
 // ==============================
 router.post('/logout', (req, res) => {
   const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
-  res.clearCookie('token', {
+  const clearCookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-  });
+    sameSite: 'lax',
+  };
+  if (isProduction && process.env.COOKIE_DOMAIN) {
+    clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
+  }
+  res.clearCookie('token', clearCookieOptions);
   res.json({ message: 'Logged out' });
 });
 

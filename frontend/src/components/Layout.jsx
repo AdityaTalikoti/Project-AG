@@ -136,11 +136,6 @@ export default function Layout() {
                   </div>
                 )}
               </div>
-              {isSidebarExpanded && (
-                <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 transition p-1.5 rounded-lg hover:bg-gray-900/50" title="Logout">
-                  <LogOut size={16} />
-                </button>
-              )}
             </div>
           )}
         </div>
