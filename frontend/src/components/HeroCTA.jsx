@@ -29,7 +29,30 @@ export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) 
         })
       });
       if (res.ok) {
-        window.location.reload();
+        const data = await res.json();
+        if (data.success && data.data) {
+          const saveRes = await fetch(`${API_BASE}/api/roadmaps/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              title: data.data.title,
+              description: data.data.description,
+              skillLevel,
+              dailyCommitment: commitment,
+              milestones: data.data.milestones,
+              timeline: data.data.estimatedDuration,
+              sync: false
+            })
+          });
+          if (saveRes.ok) {
+            window.location.reload();
+          } else {
+            alert("Failed to save the generated roadmap.");
+          }
+        } else {
+          alert("Failed to generate roadmap content.");
+        }
       } else {
         alert("Failed to generate roadmap.");
       }

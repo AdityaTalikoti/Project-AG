@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchCurrentUser } from '../store/authSlice';
+import { fetchCurrentUser, setCredentials } from '../store/authSlice';
 import PasswordInput from '../components/auth/PasswordInput';
 import PhoneInput from '../components/auth/PhoneInput';
 import OtpInput from '../components/auth/OtpInput';
@@ -102,8 +102,8 @@ function SignUpView({ onSwitch, initialEmail = '' }) {
         setLoading(false);
         return;
       }
-      // Success — refresh auth state and navigate
-      await dispatch(fetchCurrentUser());
+      // Success — set auth state and navigate
+      dispatch(setCredentials(data.user));
       navigate('/dashboard');
     } catch (err) {
       setBanner('Network error. Please try again.');
@@ -194,8 +194,8 @@ function SignInView({ onSwitch, onForgot, onNeedPassword }) {
         setLoading(false);
         return;
       }
-      // Success — refresh auth state and navigate
-      await dispatch(fetchCurrentUser());
+      // Success — set auth state and navigate
+      dispatch(setCredentials(data.user));
       navigate('/dashboard');
     } catch (err) {
       setBanner('Network error. Please try again.');
