@@ -233,7 +233,6 @@ router.get('/stats', authMiddleware, async (req, res) => {
       .filter(s => new Date(s.createdAt) >= fourteenDaysAgo && new Date(s.createdAt) < sevenDaysAgo)
       .reduce((sum, s) => sum + (s.duration / 3600), 0);
 
-    const todayStr = getLocalDateStr(new Date(), clientTimezone);
     const todayFocusHours = focusSessionMap[todayStr] || 0.0;
 
     const yesterday = new Date();
