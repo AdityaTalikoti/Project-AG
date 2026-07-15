@@ -5,7 +5,8 @@ const taskSchema = new mongoose.Schema({
   description: { type: String },
   duration: { type: String, default: '30 mins' },
   xpReward: { type: Number, default: 50 },
-  completed: { type: Boolean, default: false }
+  completed: { type: Boolean, default: false },
+  completedAt: { type: Date }
 });
 
 const moduleSchema = new mongoose.Schema({

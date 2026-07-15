@@ -100,33 +100,6 @@ export default function Widgets({
           </svg>
         </div>
       </div>
-
-      {/* Upcoming Tasks Card */}
-      <div className="bg-[#0a0e1a] p-5 rounded-2xl border border-[#121829] shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Upcoming Tasks</h3>
-          <button className="text-[10px] text-gray-500 font-semibold hover:text-emerald-400 transition cursor-pointer">
-            View All →
-          </button>
-        </div>
-        
-        <div className="space-y-3.5">
-          {upcomingTasks.map((task) => (
-            <div key={task.id} className="flex items-center justify-between text-xs py-1">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getPriorityColor(task.priority, task.status)}`} />
-                <span className={`font-medium truncate ${task.status === 'current' ? 'text-white' : 'text-gray-400'}`}>
-                  {task.title}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-[10px] text-gray-500 font-mono font-medium ml-2 bg-gray-900 border border-gray-800/80 px-2 py-0.5 rounded-md flex-shrink-0">
-                <Clock size={10} />
-                <span>{task.time}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

@@ -372,12 +372,6 @@ export default function Home() {
                         {evt.description && (
                           <p className="text-[10px] text-gray-400 truncate max-w-sm sm:max-w-md">{evt.description}</p>
                         )}
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] text-gray-500 font-mono font-medium flex items-center gap-1">
-                            <Clock size={10} />
-                            {getEventTimeStr(evt.startDateTime, evt.endDateTime)}
-                          </span>
-                        </div>
                       </div>
                     </div>
                     
@@ -415,7 +409,7 @@ export default function Home() {
             )}
           </div>
 
-          <WeeklyProgress weeklyData={stats.weeklyProgress} isLoading={isLoading} />
+          <WeeklyProgress weeklyData={stats.weeklyProgress} previousWeeklyData={stats.previousWeeklyProgress} isLoading={isLoading} />
         </div>
 
         {/* Right Column: Actions, Countdown, Mini-Calendar, & AI Insights */}
