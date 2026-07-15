@@ -235,9 +235,6 @@ router.get('/stats', authMiddleware, async (req, res) => {
 
     const todayFocusHours = focusSessionMap[todayStr] || 0.0;
 
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = getLocalDateStr(yesterday, clientTimezone);
     const yesterdayFocusHours = focusSessionMap[yesterdayStr] || 0.0;
 
     const currentFocusHours = todayFocusHours;
