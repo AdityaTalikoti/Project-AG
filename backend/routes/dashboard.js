@@ -79,17 +79,35 @@ router.get('/stats', authMiddleware, async (req, res) => {
       };
     });
 
-    // Group active days (focus sessions or journals) by date based on target
+    // Fetch all completed roadmap tasks and their completedAt dates
+    const completedTasksDates = [];
+    const roadmaps = await Roadmap.find({ studentId });
+    roadmaps.forEach(r => {
+      r.modules.forEach(m => {
+        m.tasks.forEach(t => {
+          if (t.completed && t.completedAt) {
+            completedTasksDates.push(getLocalDateStr(new Date(t.completedAt), clientTimezone));
+          }
+        });
+      });
+    });
+
+    // Group active days (focus sessions, journals, or completed roadmap tasks) by date
     const activeDaysMap = {};
     const focusSessionDates = focusSessions.map(s => getLocalDateStr(new Date(s.createdAt), clientTimezone));
     const journalDates = journals.map(j => getLocalDateStr(new Date(j.createdAt), clientTimezone));
-    const allUniqueDates = Array.from(new Set([...focusSessionDates, ...journalDates]));
+    const allUniqueDates = Array.from(new Set([...focusSessionDates, ...journalDates, ...completedTasksDates]));
+
+    const completedTasksMap = {};
+    completedTasksDates.forEach(dateStr => {
+      completedTasksMap[dateStr] = true;
+    });
 
     allUniqueDates.forEach(dateStr => {
       const journalMin = journalMap[dateStr] ? 180 : 0;
       const actualFocusMin = (focusSessionMap[dateStr] || 0) * 60;
       const totalMin = journalMin + actualFocusMin;
-      if (totalMin >= dailyTarget) {
+      if (totalMin >= dailyTarget || completedTasksMap[dateStr]) {
         activeDaysMap[dateStr] = true;
       }
     });
@@ -150,16 +168,30 @@ router.get('/stats', authMiddleware, async (req, res) => {
     const aiInsight = null;
 
     // Calculate weekly progress focus hours for the last 7 days dynamically
-    // Combine 3 hours per journal entry with actual Focus Sessions
+    // Count focus hours daily and show the graph on the basis of it (using actual focus sessions)
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const weeklyProgress = Array.from({ length: 7 }).map((_, idx) => {
       const d = new Date();
       d.setDate(d.getDate() - (6 - idx));
       const dateStr = getLocalDateStr(d, clientTimezone);
       
-      const journalHours = journalMap[dateStr] ? 3.0 : 0.0;
       const actualFocusHours = focusSessionMap[dateStr] || 0.0;
-      const totalHours = Math.min(24.0, Number((journalHours + actualFocusHours).toFixed(1)));
+      const totalHours = Number(actualFocusHours.toFixed(1));
+      
+      return {
+        day: daysOfWeek[d.getDay()],
+        hours: totalHours
+      };
+    });
+
+    // Calculate previous weekly progress focus hours (last 7-14 days)
+    const previousWeeklyProgress = Array.from({ length: 7 }).map((_, idx) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (13 - idx));
+      const dateStr = getLocalDateStr(d, clientTimezone);
+      
+      const actualFocusHours = focusSessionMap[dateStr] || 0.0;
+      const totalHours = Number(actualFocusHours.toFixed(1));
       
       return {
         day: daysOfWeek[d.getDay()],
@@ -201,8 +233,16 @@ router.get('/stats', authMiddleware, async (req, res) => {
       .filter(s => new Date(s.createdAt) >= fourteenDaysAgo && new Date(s.createdAt) < sevenDaysAgo)
       .reduce((sum, s) => sum + (s.duration / 3600), 0);
 
-    const currentFocusHours = thisWeekJournalsCount * 3.0 + thisWeekFocusSessionsSum;
-    const lastFocusHours = lastWeekJournalsCount * 3.0 + lastWeekFocusSessionsSum;
+    const todayStr = getLocalDateStr(new Date(), clientTimezone);
+    const todayFocusHours = focusSessionMap[todayStr] || 0.0;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = getLocalDateStr(yesterday, clientTimezone);
+    const yesterdayFocusHours = focusSessionMap[yesterdayStr] || 0.0;
+
+    const currentFocusHours = todayFocusHours;
+    const lastFocusHours = yesterdayFocusHours;
 
     let focusHoursTrend = 0;
     if (lastFocusHours > 0) {
@@ -374,6 +414,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
           label: consistencyLabel
         },
         weeklyProgress,
+        previousWeeklyProgress,
         heatmap,
         currentWeekDots,
         upcomingTasks,

@@ -63,7 +63,7 @@ export const handleAnalyzeSuggestions = async (req, res, next) => {
 export const handleSaveRoadmap = async (req, res, next) => {
   try {
     const studentId = req.user.id;
-    const { title, description, skillLevel, dailyCommitment, milestones, timeline } = req.body;
+    const { title, description, skillLevel, dailyCommitment, milestones, timeline, sync } = req.body;
 
     if (!title) {
       return res.status(400).json({ success: false, message: "Roadmap title is required" });
@@ -137,12 +137,15 @@ export const handleSaveRoadmap = async (req, res, next) => {
       completionPercentage: 0
     });
 
-    // 3. Automatically trigger calendar sync in the background
-    await syncRoadmapToCalendar(newRoadmap._id, studentId);
+    // 3. Trigger calendar sync if requested
+    const shouldSync = sync === true || sync === 'true';
+    if (shouldSync) {
+      await syncRoadmapToCalendar(newRoadmap._id, studentId);
+    }
 
     return res.status(201).json({
       success: true,
-      message: "Roadmap customized and saved successfully. Calendar synced.",
+      message: shouldSync ? "Roadmap customized and saved successfully. Calendar synced." : "Roadmap customized and saved successfully.",
       data: newRoadmap
     });
   } catch (error) {

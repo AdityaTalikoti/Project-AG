@@ -285,7 +285,7 @@ export default function RoadmapPage() {
     }));
   };
 
-  const handleSaveCustomizedRoadmap = async () => {
+  const handleSaveCustomizedRoadmap = async (shouldSync = false) => {
     try {
       const res = await saveRoadmap({
         title: generatedRoadmap.title,
@@ -293,11 +293,12 @@ export default function RoadmapPage() {
         skillLevel,
         dailyCommitment,
         milestones: generatedRoadmap.milestones,
-        timeline: generatedRoadmap.estimatedDuration
+        timeline: generatedRoadmap.estimatedDuration,
+        sync: shouldSync
       }).unwrap();
 
       if (res.success && res.data) {
-        addToast(res.message || "Roadmap saved and calendar synchronized successfully!", "success");
+        addToast(res.message || (shouldSync ? "Roadmap saved and calendar synchronized successfully!" : "Roadmap saved successfully!"), "success");
         setRoadmap(res.data);
         setGeneratedRoadmap(null);
         setSuggestions([]);
@@ -590,23 +591,33 @@ export default function RoadmapPage() {
             <p className="text-xs text-gray-400">Review your generated learning curriculum. Reorder, add, or delete milestones before saving.</p>
           </div>
 
-          <button
-            onClick={handleSaveCustomizedRoadmap}
-            disabled={isSavingRoadmap || !generatedRoadmap?.milestones || generatedRoadmap.milestones.length === 0}
-            className="bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition duration-200 cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/20 disabled:opacity-50"
-          >
-            {isSavingRoadmap ? (
-              <>
-                <RefreshCw size={13} className="animate-spin" />
-                Saving Path...
-              </>
-            ) : (
-              <>
-                <Save size={13} />
-                Save & Sync Calendar 🚀
-              </>
-            )}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => handleSaveCustomizedRoadmap(false)}
+              disabled={isSavingRoadmap || !generatedRoadmap?.milestones || generatedRoadmap.milestones.length === 0}
+              className="bg-[#111625] border border-gray-800 hover:border-gray-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition duration-200 cursor-pointer flex items-center gap-2 disabled:opacity-50"
+            >
+              <Save size={13} />
+              Save Roadmap
+            </button>
+            <button
+              onClick={() => handleSaveCustomizedRoadmap(true)}
+              disabled={isSavingRoadmap || !generatedRoadmap?.milestones || generatedRoadmap.milestones.length === 0}
+              className="bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition duration-200 cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/20 disabled:opacity-50"
+            >
+              {isSavingRoadmap ? (
+                <>
+                  <RefreshCw size={13} className="animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <RefreshCw size={13} />
+                  Save & Sync Roadmap 🚀
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Workspace Layout */}
@@ -857,23 +868,33 @@ export default function RoadmapPage() {
                 </div>
               </div>
 
-              <button
-                onClick={handleSaveCustomizedRoadmap}
-                disabled={isSavingRoadmap || !generatedRoadmap?.milestones || generatedRoadmap.milestones.length === 0}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold py-3 px-4 rounded-xl text-xs transition duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/20 disabled:opacity-50"
-              >
-                {isSavingRoadmap ? (
-                  <>
-                    <RefreshCw size={13} className="animate-spin" />
-                    Saving Custom Roadmap...
-                  </>
-                ) : (
-                  <>
-                    <Save size={13} />
-                    Save & Sync Calendar 🚀
-                  </>
-                )}
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => handleSaveCustomizedRoadmap(false)}
+                  disabled={isSavingRoadmap || !generatedRoadmap?.milestones || generatedRoadmap.milestones.length === 0}
+                  className="w-full bg-[#111625] border border-gray-800 hover:border-gray-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition duration-200 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <Save size={13} />
+                  Save Roadmap
+                </button>
+                <button
+                  onClick={() => handleSaveCustomizedRoadmap(true)}
+                  disabled={isSavingRoadmap || !generatedRoadmap?.milestones || generatedRoadmap.milestones.length === 0}
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold py-3 px-4 rounded-xl text-xs transition duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/20 disabled:opacity-50"
+                >
+                  {isSavingRoadmap ? (
+                    <>
+                      <RefreshCw size={13} className="animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw size={13} />
+                      Save & Sync Roadmap 🚀
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

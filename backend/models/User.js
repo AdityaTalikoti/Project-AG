@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
   otp_code: { type: String },
   otp_expiry: { type: Date },
   phone: { type: String },
-  dailyTarget: { type: Number },
+  dailyTarget: { type: Number, default: 60 },
 }, { timestamps: true });
 
 export default mongoose.model('User', userSchema);

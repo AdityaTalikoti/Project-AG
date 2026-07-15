@@ -375,6 +375,7 @@ router.post('/tasks/toggle', authMiddleware, async (req, res) => {
       const taskObj = moduleObj.tasks.id(taskId);
       if (taskObj) {
         taskObj.completed = completed;
+        taskObj.completedAt = completed ? new Date() : undefined;
         taskFound = true;
         break;
       }
