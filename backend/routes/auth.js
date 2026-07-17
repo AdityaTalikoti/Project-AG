@@ -8,13 +8,23 @@ import authMiddleware from '../middleware/auth.js';
 const router = express.Router();
 
 // ── Cookie config ──
-const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+// NODE_ENV must be manually set to 'production' in your host's env vars — Railway does not
+// auto-inject it. RAILWAY_ENVIRONMENT_NAME is provided automatically as a fallback.
+const isProduction =
+  process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT_NAME;
+
+// SameSite must be 'none' (+ secure) when frontend and backend are on different registrable
+// domains (e.g. Vercel frontend -> Railway backend), since 'lax' cookies are not sent on
+// cross-site fetch/XHR calls. Only use 'lax' if both apps share a domain via COOKIE_DOMAIN.
+const resolvedSameSite = isProduction
+  ? (process.env.COOKIE_DOMAIN ? 'lax' : 'none')
+  : 'lax';
 
 const cookieOptions = {
   httpOnly: true,
-  secure: isProduction,
-  sameSite: 'lax', // Lax is the secure industry standard for same-site/same-origin architectures
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  secure: isProduction, // required whenever sameSite is 'none'; 'none' only occurs when isProduction is true
+  sameSite: resolvedSameSite,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days default (overridden per-login below)
 };
 
 // If custom domains share same registrable domain (e.g. app.domain.com and api.domain.com),
@@ -24,11 +34,11 @@ if (isProduction && process.env.COOKIE_DOMAIN) {
 }
 
 // ── Helper: generate JWT ──
-function signToken(user) {
+function signToken(user, expiresIn = '7d') {
   return jwt.sign(
     { id: user._id, email: user.email, name: user.name, picture: user.picture },
     process.env.JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn }
   );
 }
 
@@ -127,13 +137,14 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Set JWT cookie and return user
-    const token = signToken(user);
-    
+    // Set JWT cookie and return user — token expiry must match cookie maxAge
+    const expiresIn = remember ? '30d' : '1d';
+    const token = signToken(user, expiresIn);
+
     // Customize cookie options based on remember checkbox
     const loginCookieOptions = { ...cookieOptions };
     if (!remember) {
-      delete loginCookieOptions.maxAge;
+      delete loginCookieOptions.maxAge; // session cookie, cleared on browser close (JWT still caps at 1d)
     } else {
       loginCookieOptions.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
     }
@@ -295,11 +306,10 @@ router.get('/me', authMiddleware, async (req, res) => {
 // Logout — clear cookie
 // ==============================
 router.post('/logout', (req, res) => {
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
   const clearCookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax',
+    sameSite: resolvedSameSite,
   };
   if (isProduction && process.env.COOKIE_DOMAIN) {
     clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
