@@ -239,35 +239,6 @@ router.get('/google/callback', async (req, res) => {
 });
 
 // ==============================
-// Set Cookie (for Google OAuth callback redirection via AJAX)
-// ==============================
-router.post('/set-cookie', async (req, res) => {
-  try {
-    const { token } = req.body;
-    if (!token) {
-      return res.status(400).json({ message: 'Token is required' });
-    }
-
-    // Verify token validity
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-__v');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Safely write HTTP-only cookie in direct AJAX POST context
-    res.cookie('token', token, cookieOptions);
-    res.json({
-      success: true,
-      user: { _id: user._id, name: user.name, email: user.email, picture: user.picture, phone: user.phone }
-    });
-  } catch (error) {
-    console.error('Set cookie error:', error.message);
-    res.status(401).json({ message: 'Invalid or expired token' });
-  }
-});
-
-// ==============================
 // Update daily target (protected)
 // ==============================
 router.put('/daily-target', authMiddleware, async (req, res) => {
