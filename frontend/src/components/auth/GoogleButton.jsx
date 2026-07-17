@@ -18,8 +18,7 @@ export default function GoogleButton() {
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&response_type=code` +
       `&scope=${encodeURIComponent(scope)}` +
-      `&access_type=offline` +
-      `&prompt=consent` +
+      `&prompt=select_account` +
       `&state=${state}`;
 
     window.location.href = authUrl;

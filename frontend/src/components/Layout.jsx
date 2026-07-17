@@ -19,6 +19,33 @@ export default function Layout() {
   const [isHovered, setIsHovered] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const dropdownTimeoutRef = React.useRef(null);
+
+  const handleProfileMouseEnter = () => {
+    if (dropdownTimeoutRef.current) {
+      clearTimeout(dropdownTimeoutRef.current);
+      dropdownTimeoutRef.current = null;
+    }
+    setProfileDropdownOpen(true);
+  };
+
+  const handleProfileMouseLeave = () => {
+    if (dropdownTimeoutRef.current) {
+      clearTimeout(dropdownTimeoutRef.current);
+    }
+    dropdownTimeoutRef.current = setTimeout(() => {
+      setProfileDropdownOpen(false);
+    }, 3000);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (dropdownTimeoutRef.current) {
+        clearTimeout(dropdownTimeoutRef.current);
+      }
+    };
+  }, []);
+
 
   const isSidebarExpanded = isHovered || mobileMenuOpen;
 
@@ -196,8 +223,8 @@ export default function Layout() {
             {user && (
               <div 
                 className="relative"
-                onMouseEnter={() => setProfileDropdownOpen(true)}
-                onMouseLeave={() => setProfileDropdownOpen(false)}
+                onMouseEnter={handleProfileMouseEnter}
+                onMouseLeave={handleProfileMouseLeave}
               >
                 <div className="flex items-center gap-3 pl-3 border-l border-[#1b2237] cursor-pointer">
                   <div className="flex flex-col text-right hidden lg:flex">
