@@ -210,10 +210,11 @@ router.patch('/:id', authMiddleware, async (req, res) => {
       if (priority && ['low', 'medium', 'high'].includes(priority)) task.priority = priority;
       if (status && ['pending', 'completed'].includes(status)) task.status = status;
     } else if (isAssignedUser) {
-      // Assigned student on mentor task can only update status
-      if (status && ['pending', 'completed'].includes(status)) {
-        task.status = status;
-      }
+      // Assigned student on mentor task CANNOT change status
+      // Status will be changed through submission/approval workflow in Phase 2
+      return res.status(403).json({ 
+        message: 'Students cannot modify mentor-assigned tasks. Task completion requires mentor approval.' 
+      });
     }
 
     await task.save();

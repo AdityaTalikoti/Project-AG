@@ -142,6 +142,12 @@ export default function TasksPage() {
   };
 
   const handleToggleComplete = async (task) => {
+    // Prevent students from marking mentor tasks as complete
+    if (task.source === 'mentor' && task.createdBy._id !== user._id) {
+      showToast('Mentor-assigned tasks can only be completed through mentor approval');
+      return;
+    }
+
     try {
       await updateTask({
         id: task._id,
@@ -189,21 +195,36 @@ export default function TasksPage() {
     }
   };
 
-  const TaskCard = ({ task, canEdit = false }) => (
-    <div className="bg-[#0d1222] border border-[#161d31] rounded-xl p-4 hover:border-[#1e2639] transition group">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <button
-            onClick={() => handleToggleComplete(task)}
-            className="mt-0.5 flex-shrink-0 cursor-pointer"
-          >
-            {task.status === 'completed' ? (
-              <CheckCircle size={20} className="text-emerald-400 fill-emerald-400/20" />
+  const TaskCard = ({ task, canEdit = false }) => {
+    const isMentorTask = task.source === 'mentor';
+    const isAssignedToMe = task.assignedTo?._id === user?._id;
+    const canToggleComplete = !isMentorTask || !isAssignedToMe;
+
+    return (
+      <div className="bg-[#0d1222] border border-[#161d31] rounded-xl p-4 hover:border-[#1e2639] transition group">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            {canToggleComplete ? (
+              <button
+                onClick={() => handleToggleComplete(task)}
+                className="mt-0.5 flex-shrink-0 cursor-pointer"
+              >
+                {task.status === 'completed' ? (
+                  <CheckCircle size={20} className="text-emerald-400 fill-emerald-400/20" />
+                ) : (
+                  <div className="w-5 h-5 rounded-full border-2 border-gray-600 hover:border-emerald-400 transition" />
+                )}
+              </button>
             ) : (
-              <div className="w-5 h-5 rounded-full border-2 border-gray-600 hover:border-emerald-400 transition" />
+              <div className="mt-0.5 flex-shrink-0">
+                {task.status === 'completed' ? (
+                  <CheckCircle size={20} className="text-emerald-400 fill-emerald-400/20" />
+                ) : (
+                  <div className="w-5 h-5 rounded-full border-2 border-gray-700 opacity-50" />
+                )}
+              </div>
             )}
-          </button>
-          <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0">
             <h4 
               className={`text-sm font-semibold mb-1 cursor-pointer hover:text-emerald-400 transition truncate ${
                 task.status === 'completed' ? 'text-gray-500 line-through' : 'text-white'
@@ -247,6 +268,7 @@ export default function TasksPage() {
       </div>
     </div>
   );
+};
 
   const TaskFormModal = ({ isOpen, onClose, onSubmit, isEdit = false }) => {
     if (!isOpen) return null;
