@@ -6,7 +6,7 @@ export const apiSlice = createApi({
     baseUrl: `${import.meta.env.VITE_API_URL || ''}/api/`,
     credentials: 'include'
   }),
-  tagTypes: ['Journal', 'DashboardStats', 'Event', 'StudyPlan'],
+  tagTypes: ['Journal', 'DashboardStats', 'Event', 'StudyPlan', 'Task'],
   endpoints: (builder) => ({
     getJournals: builder.query({
       query: (studentId) => `journal/${studentId}`,
@@ -185,6 +185,42 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['StudyPlan', 'Event'],
     }),
+
+    // --- Tasks ---
+    getTasks: builder.query({
+      query: () => 'tasks',
+      providesTags: ['Task'],
+    }),
+    getTaskById: builder.query({
+      query: (id) => `tasks/${id}`,
+      providesTags: (result, error, id) => [{ type: 'Task', id }],
+    }),
+    getStudents: builder.query({
+      query: () => 'tasks/students',
+    }),
+    createTask: builder.mutation({
+      query: (taskData) => ({
+        url: 'tasks',
+        method: 'POST',
+        body: taskData,
+      }),
+      invalidatesTags: ['Task'],
+    }),
+    updateTask: builder.mutation({
+      query: ({ id, ...taskData }) => ({
+        url: `tasks/${id}`,
+        method: 'PATCH',
+        body: taskData,
+      }),
+      invalidatesTags: ['Task'],
+    }),
+    deleteTask: builder.mutation({
+      query: (id) => ({
+        url: `tasks/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Task'],
+    }),
   }),
 });
 
@@ -224,5 +260,13 @@ export const {
   useGetStudyPlanQuery,
   useRegenerateStudyPlanMutation,
   useToggleStudyPlanTaskMutation,
-  useRescheduleMilestoneMutation
+  useRescheduleMilestoneMutation,
+
+  // Tasks Hooks
+  useGetTasksQuery,
+  useGetTaskByIdQuery,
+  useGetStudentsQuery,
+  useCreateTaskMutation,
+  useUpdateTaskMutation,
+  useDeleteTaskMutation
 } = apiSlice;

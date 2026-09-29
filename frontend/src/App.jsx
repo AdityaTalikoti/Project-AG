@@ -12,6 +12,7 @@ import ComingSoonPage from './pages/ComingSoonPage';
 import RoadmapPage from './pages/RoadmapPage';
 import CalendarPage from './pages/CalendarPage';
 import AIMentor from './pages/AIMentor';
+import TasksPage from './pages/TasksPage';
 
 function App() {
   const dispatch = useDispatch();
@@ -39,7 +40,7 @@ function App() {
           <Route path="journal/new" element={<JournalPage />} />
           <Route path="roadmap" element={<RoadmapPage />} />
           <Route path="calendar" element={<CalendarPage />} />
-          <Route path="tasks" element={<ComingSoonPage title="Tasks" />} />
+          <Route path="tasks" element={<TasksPage />} />
           <Route path="flashcards" element={<ComingSoonPage title="Flashcards" />} />
           <Route path="notes" element={<ComingSoonPage title="Notes" />} />
           <Route path="progress" element={<ComingSoonPage title="Progress" />} />
