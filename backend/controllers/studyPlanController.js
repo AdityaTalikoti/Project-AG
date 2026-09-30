@@ -9,14 +9,14 @@ const getNextDayOfWeek = (dayName) => {
   const today = new Date();
   const currentDayIndex = today.getDay();
   const targetDayIndex = days.indexOf(dayName.toLowerCase());
-  
+
   if (targetDayIndex === -1) return today;
-  
+
   let difference = targetDayIndex - currentDayIndex;
   if (difference <= 0) {
     difference += 7; // Push to the next week
   }
-  
+
   const resultDate = new Date(today);
   resultDate.setDate(today.getDate() + difference);
   return resultDate;
@@ -131,10 +131,10 @@ export const handleRescheduleMissedMilestone = async (req, res, next) => {
     // Remove the rescheduling advisory from today's plan so it clears from the dashboard view
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
-    
+
     const plan = await StudyPlan.findOne({ studentId, date: todayDate });
     if (plan) {
-      plan.recommendations = plan.recommendations.filter(r => 
+      plan.recommendations = plan.recommendations.filter(r =>
         !(r.metadata && r.metadata.moduleIndex === moduleIndex)
       );
       await plan.save();

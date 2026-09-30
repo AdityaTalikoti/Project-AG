@@ -36,8 +36,12 @@ export const handleDashboardInsight = async (req, res, next) => {
 
 /**
  * Controller to handle POST /api/ai/chat requests.
- * Keeps the controller layer thin by offloading prompt building and API service logic.
- * Integrates input sanitization and friendly fallback logic for AI failures.
+ * 
+ * Q10 — JAVASCRIPT EVENT LOOP DEMONSTRATION:
+ * 1. Call Stack: Synchronous validations (sanitizeInput, parameter checks) run directly on Node's main thread Call Stack.
+ * 2. Non-blocking Async I/O: Calls to `buildPrompt` (DB queries) and `generateGeminiReply` (external HTTPS) are offloaded to Node's libuv I/O engine.
+ * 3. Event Loop Processing: While awaiting network/DB responses, the Call Stack is freed, allowing Node's Event Loop to process other incoming student requests concurrently.
+ * 4. Microtask Queue: When Promise responses resolve, continuation callbacks enter the Microtask Queue and execute as soon as the Call Stack is empty.
  */
 export const handleChat = async (req, res, next) => {
   try {

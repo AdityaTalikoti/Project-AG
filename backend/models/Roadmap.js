@@ -18,6 +18,11 @@ const moduleSchema = new mongoose.Schema({
 });
 
 const roadmapSchema = new mongoose.Schema({
+  // Q8 — RELATIONAL SCHEMA DESIGN (Primary Key & Foreign Key Relationship):
+  // 1. Primary Key: MongoDB automatically generates `_id` (ObjectId) as the unique PK for each Roadmap document.
+  // 2. Foreign Key: `studentId` acts as a logical Foreign Key referencing `User._id` via Mongoose `ref: 'User'`.
+  // 3. Constraints: `required: true` enforces referential integrity so roadmaps cannot exist without a valid User owner.
+  // 4. Performance: `index: true` creates a single-field B-tree index for O(log N) query lookup by user.
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   title: { type: String, required: true },
   description: { type: String },
