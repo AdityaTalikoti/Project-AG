@@ -12,6 +12,7 @@ import focusSessionRoutes from './routes/focusSession.js';
 import roadmapRoutes from './routes/roadmaps.js';
 import eventRoutes from './routes/events.js';
 import aiRoutes from './routes/aiRoutes.js';
+import taskRoutes from './routes/tasks.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -50,6 +51,7 @@ app.use('/api/focus-session', focusSessionRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // ─────────────────────────────
 // Root Route
@@ -82,7 +84,7 @@ app.use(errorHandler);
 // MongoDB Connection
 // ─────────────────────────────
 const MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb://localhost:27017/scholarsync';
+  process.env.MONGODB_URI;
 
 mongoose
   .connect(MONGODB_URI)
