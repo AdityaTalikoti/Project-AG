@@ -86,10 +86,20 @@
 /* ---------- Social / Google ---------- */
 .auth-divider{display:flex;align-items:center;gap:1rem;margin:1.5rem 0;color:#475569;font-size:.82rem;}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:#1e293b;}
-.auth-google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:.7rem;padding:.8rem;border-radius:10px;border:1.5px solid #1e293b;background:#0f172a;color:#e2e8f0;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .25s;font-family:inherit;}
+
+/* Maintenance Notice */
+.auth-maintenance-notice{background:#451a0344;border:1px solid #ea580c44;border-radius:10px;padding:.9rem 1rem;color:#fdba74;font-size:.85rem;display:flex;align-items:flex-start;gap:.6rem;margin-bottom:1rem;line-height:1.5;}
+.auth-maintenance-notice svg{width:16px;height:16px;flex-shrink:0;margin-top:.1rem;}
+
+.auth-google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:.7rem;padding:.8rem;border-radius:10px;border:1.5px solid #1e293b;background:#0f172a;color:#e2e8f0;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .25s;font-family:inherit;position:relative;}
 .auth-google-btn:hover{background:#1e293b;border-color:#334155;transform:translateY(-1px);}
 .auth-google-btn:active{transform:translateY(0);}
 .auth-google-btn svg{width:20px;height:20px;}
+
+/* Disabled Google Button State */
+.auth-google-btn-disabled{opacity:.6;cursor:not-allowed;background:#0a0d16;border-color:#1a1d2b;}
+.auth-google-btn-disabled:hover{background:#0a0d16;border-color:#1a1d2b;transform:none;}
+.auth-unavailable-badge{position:absolute;top:-8px;right:-8px;background:#ea580c;color:#fff;font-size:.65rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;box-shadow:0 2px 8px rgba(234,88,12,.4);}
 
 /* ---------- Submit Button ---------- */
 .auth-submit{width:100%;padding:.85rem;border:none;border-radius:10px;font-size:1rem;font-weight:700;color:#fff;cursor:pointer;transition:all .3s;font-family:inherit;background:linear-gradient(135deg,#4f46e5,#7c3aed);box-shadow:0 4px 15px rgba(99,102,241,.3);margin-top:.5rem;position:relative;overflow:hidden;}
