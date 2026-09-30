@@ -2,7 +2,7 @@
     "rewrites": [
         {
             "source": "/api/:path*",
-            "destination": "https://scholarsync-939168811784.us-central1.run.app/api/:path*"
+            "destination": "https://scholar-sync-7ot6.onrender.com/api/:path*"
         },
         {
             "source": "/(.*)",

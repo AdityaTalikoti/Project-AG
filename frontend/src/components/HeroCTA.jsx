@@ -113,11 +113,10 @@ export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) 
                     key={lvl}
                     type="button"
                     onClick={() => setSkillLevel(lvl)}
-                    className={`py-2 text-[10px] font-bold rounded-xl border transition cursor-pointer ${
-                      skillLevel === lvl
+                    className={`py-2 text-[10px] font-bold rounded-xl border transition cursor-pointer ${skillLevel === lvl
                         ? 'bg-purple-500/15 border-purple-500 text-purple-400'
                         : 'bg-[#111625] border-[#1b2237] text-gray-400 hover:border-gray-700'
-                    }`}
+                      }`}
                   >
                     {lvl}
                   </button>
@@ -165,11 +164,10 @@ export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) 
                     key={mins}
                     type="button"
                     onClick={() => setCommitment(mins)}
-                    className={`py-2 text-[10px] font-bold rounded-xl border transition cursor-pointer ${
-                      commitment === mins
+                    className={`py-2 text-[10px] font-bold rounded-xl border transition cursor-pointer ${commitment === mins
                         ? 'bg-purple-500/15 border-purple-500 text-purple-400'
                         : 'bg-[#111625] border-[#1b2237] text-gray-400 hover:border-gray-700'
-                    }`}
+                      }`}
                   >
                     {mins >= 60 ? `${mins / 60} hr${mins > 60 ? 's' : ''}` : `${mins} min`}
                   </button>
@@ -208,7 +206,7 @@ export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) 
     <div className="bg-[#0a0e1a] p-6 rounded-2xl border border-[#121829] shadow-sm flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
       {/* Deep green background blur glow */}
       <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl" />
-      
+
       {/* Circular Progress & Info */}
       <div className="flex flex-col sm:flex-row items-center gap-6 z-10 w-full md:w-auto">
         {/* SVG Circle Progress */}
@@ -250,11 +248,11 @@ export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) 
             Active Module: <strong className="text-emerald-400">{activeRoadmap?.activeModuleName}</strong>
           </p>
           <p className="text-[10px] text-gray-500 font-semibold mt-2">{completedCount} of {totalCount} modules completed</p>
-          
+
           {/* Horizontal Progress Bar */}
           <div className="w-full sm:w-64 bg-[#111625] h-1.5 rounded-full overflow-hidden mt-2 border border-[#1b2237]">
-            <div 
-              className="bg-emerald-500 h-full rounded-full transition-all duration-700" 
+            <div
+              className="bg-emerald-500 h-full rounded-full transition-all duration-700"
               style={{ width: `${completion}%` }}
             />
           </div>
@@ -287,7 +285,7 @@ export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) 
           </svg>
         </div>
 
-        <Link 
+        <Link
           to="/dashboard/roadmap"
           className="bg-[#111625] hover:bg-[#1c2237] text-white border border-[#1b2237] font-semibold py-2 px-4 rounded-xl text-xs transition duration-200 flex items-center gap-1.5 cursor-pointer shadow-md"
         >
