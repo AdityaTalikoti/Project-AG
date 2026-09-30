@@ -276,18 +276,33 @@ export default function TasksPage() {
     const isMentor = user?.role === 'Mentor';
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={(e) => {
+          // Close modal only if clicking the backdrop, not the modal content
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+      >
+        <div 
+          className="bg-[#0b0e17] border border-gray-800 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex justify-between items-center p-5 border-b border-gray-900 bg-[#0a0e1a]">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
               {isEdit ? 'Edit Task' : 'Create Task'}
             </h3>
-            <button onClick={onClose} className="text-gray-500 hover:text-white p-1 hover:bg-gray-900 rounded-lg transition cursor-pointer">
+            <button 
+              type="button"
+              onClick={onClose} 
+              className="text-gray-500 hover:text-white p-1 hover:bg-gray-900 rounded-lg transition cursor-pointer"
+            >
               <X size={16} />
             </button>
           </div>
 
-          <form onSubmit={onSubmit} className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+          <form onSubmit={onSubmit} className="p-5 space-y-4 max-h-[75vh] overflow-y-auto scrollbar-thin">
             {validationError && (
               <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
                 ⚠️ {validationError}
@@ -295,20 +310,23 @@ export default function TasksPage() {
             )}
 
             <div className="space-y-1">
-              <label className="text-xs text-gray-400 font-semibold">Title *</label>
+              <label htmlFor="task-title" className="text-xs text-gray-400 font-semibold">Title *</label>
               <input
+                id="task-title"
                 type="text"
                 placeholder="Task title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition"
                 required
+                autoFocus
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-gray-400 font-semibold">Description</label>
+              <label htmlFor="task-description" className="text-xs text-gray-400 font-semibold">Description</label>
               <textarea
+                id="task-description"
                 rows={3}
                 placeholder="Task description (optional)"
                 value={formData.description}
