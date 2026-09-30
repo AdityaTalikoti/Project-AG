@@ -13,6 +13,7 @@ import roadmapRoutes from './routes/roadmaps.js';
 import eventRoutes from './routes/events.js';
 import aiRoutes from './routes/aiRoutes.js';
 import taskRoutes from './routes/tasks.js';
+import taskSubmissionRoutes from './routes/taskSubmissions.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -52,6 +53,7 @@ app.use('/api/roadmaps', roadmapRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/tasks', taskSubmissionRoutes);
 
 // ─────────────────────────────
 // Root Route

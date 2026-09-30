@@ -23,8 +23,12 @@ const taskSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'completed'],
+      enum: ['pending', 'submitted', 'needs_revision', 'completed', 'expired'],
       default: 'pending',
+    },
+    timeLimit: {
+      type: Number, // in hours
+      default: null,
     },
     source: {
       type: String,

@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { 
   useGetTasksQuery, 
   useCreateTaskMutation, 
   useUpdateTaskMutation, 
   useDeleteTaskMutation,
-  useGetStudentsQuery 
+  useGetStudentsQuery,
+  useSubmitTaskMutation,
+  useGetTaskSubmissionsQuery,
+  useReviewSubmissionMutation
 } from '../store/apiSlice';
 import { 
   Plus, 
@@ -17,8 +20,18 @@ import {
   Check, 
   Clock,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Upload,
+  FileText,
+  Image as ImageIcon,
+  Timer,
+  Send,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
+import TaskSubmissionModal from '../components/TaskSubmissionModal';
+import TaskReviewModal from '../components/TaskReviewModal';
+import TaskViewModalEnhanced from '../components/TaskViewModalEnhanced';
 
 export default function TasksPage() {
   const { user } = useSelector((state) => state.auth);
@@ -27,6 +40,8 @@ export default function TasksPage() {
   const [createTask] = useCreateTaskMutation();
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
+  const [submitTask] = useSubmitTaskMutation();
+  const [reviewSubmission] = useReviewSubmissionMutation();
 
   const tasks = tasksResponse?.data || [];
   const students = studentsResponse?.data || [];
@@ -39,7 +54,10 @@ export default function TasksPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [submitModalOpen, setSubmitModalOpen] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -48,8 +66,18 @@ export default function TasksPage() {
     dueDate: '',
     priority: 'medium',
     source: 'self',
-    assignedTo: ''
+    assignedTo: '',
+    timeLimit: ''
   });
+
+  // Submission form state
+  const [submissionFiles, setSubmissionFiles] = useState([]);
+  const [submissionNote, setSubmissionNote] = useState('');
+  const [submissionLoading, setSubmissionLoading] = useState(false);
+
+  // Review form state
+  const [reviewFeedback, setReviewFeedback] = useState('');
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   const [validationError, setValidationError] = useState('');
   const [toastMessage, setToastMessage] = useState('');
@@ -66,9 +94,19 @@ export default function TasksPage() {
       dueDate: '',
       priority: 'medium',
       source: 'self',
-      assignedTo: ''
+      assignedTo: '',
+      timeLimit: ''
     });
     setValidationError('');
+  };
+
+  const resetSubmissionForm = () => {
+    setSubmissionFiles([]);
+    setSubmissionNote('');
+  };
+
+  const resetReviewForm = () => {
+    setReviewFeedback('');
   };
 
   const handleCreateTask = async (e) => {
@@ -92,7 +130,8 @@ export default function TasksPage() {
         dueDate: formData.dueDate || null,
         priority: formData.priority,
         source: formData.source,
-        assignedTo: formData.source === 'mentor' ? formData.assignedTo : undefined
+        assignedTo: formData.source === 'mentor' ? formData.assignedTo : undefined,
+        timeLimit: formData.source === 'mentor' && formData.timeLimit ? Number(formData.timeLimit) : undefined
       };
 
       await createTask(taskPayload).unwrap();
@@ -158,6 +197,74 @@ export default function TasksPage() {
     }
   };
 
+  const handleSubmitTask = async (e) => {
+    e.preventDefault();
+    setValidationError('');
+
+    if (!submissionFiles || submissionFiles.length === 0) {
+      setValidationError('Please select at least one file to upload');
+      return;
+    }
+
+    // Check file types
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    for (const file of submissionFiles) {
+      if (!allowedTypes.includes(file.type)) {
+        setValidationError('Only images (JPEG, PNG, GIF, WEBP) and PDF files are allowed');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setValidationError('File size must not exceed 10MB');
+        return;
+      }
+    }
+
+    setSubmissionLoading(true);
+    try {
+      const formDataToSend = new FormData();
+      submissionFiles.forEach(file => {
+        formDataToSend.append('files', file);
+      });
+      formDataToSend.append('note', submissionNote);
+
+      await submitTask({ id: selectedTask._id, formData: formDataToSend }).unwrap();
+      showToast('Task submitted successfully!');
+      setSubmitModalOpen(false);
+      setViewModalOpen(false);
+      resetSubmissionForm();
+    } catch (err) {
+      setValidationError(err?.data?.message || 'Failed to submit task');
+    } finally {
+      setSubmissionLoading(false);
+    }
+  };
+
+  const handleReviewSubmission = async (action) => {
+    setValidationError('');
+
+    if (action === 'reject' && !reviewFeedback.trim()) {
+      setValidationError('Feedback is required when rejecting a submission');
+      return;
+    }
+
+    setReviewLoading(true);
+    try {
+      await reviewSubmission({
+        submissionId: selectedSubmission._id,
+        action,
+        feedback: reviewFeedback
+      }).unwrap();
+      showToast(action === 'approve' ? 'Submission approved!' : 'Submission rejected');
+      setReviewModalOpen(false);
+      setViewModalOpen(false);
+      resetReviewForm();
+    } catch (err) {
+      setValidationError(err?.data?.message || 'Failed to review submission');
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   const openCreateModal = () => {
     resetForm();
     setCreateModalOpen(true);
@@ -181,6 +288,56 @@ export default function TasksPage() {
     setViewModalOpen(true);
   };
 
+  const openSubmitModal = (task) => {
+    setSelectedTask(task);
+    resetSubmissionForm();
+    setSubmitModalOpen(true);
+  };
+
+  const openReviewModal = (task, submission) => {
+    setSelectedTask(task);
+    setSelectedSubmission(submission);
+    resetReviewForm();
+    setReviewModalOpen(true);
+  };
+
+  // Helper to calculate remaining time
+  const getRemainingTime = (expiresAt) => {
+    if (!expiresAt) return null;
+    
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const diffMs = expiry - now;
+
+    if (diffMs <= 0) return 'expired';
+
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m remaining`;
+    }
+    return `${minutes}m remaining`;
+  };
+
+  // Helper to check if task is expired
+  const isTaskExpired = (task) => {
+    if (!task.expiresAt) return false;
+    return new Date() > new Date(task.expiresAt);
+  };
+
+  // Helper to get status badge color
+  const getStatusBadge = (status) => {
+    switch(status) {
+      case 'pending': return { color: 'text-gray-400 bg-gray-500/10 border-gray-500/20', label: 'Pending' };
+      case 'submitted': return { color: 'text-blue-400 bg-blue-500/10 border-blue-500/20', label: 'Awaiting Review' };
+      case 'needs_revision': return { color: 'text-amber-400 bg-amber-500/10 border-amber-500/20', label: 'Needs Revision' };
+      case 'completed': return { color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', label: 'Completed' };
+      case 'expired': return { color: 'text-red-400 bg-red-500/10 border-red-500/20', label: 'Time Expired' };
+      default: return { color: 'text-gray-400 bg-gray-500/10 border-gray-500/20', label: status };
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return 'No due date';
     return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
@@ -199,6 +356,7 @@ export default function TasksPage() {
     const isMentorTask = task.source === 'mentor';
     const isAssignedToMe = task.assignedTo?._id === user?._id;
     const canToggleComplete = !isMentorTask || !isAssignedToMe;
+    const statusBadge = getStatusBadge(task.status);
 
     return (
       <div className="bg-[#0d1222] border border-[#161d31] rounded-xl p-4 hover:border-[#1e2639] transition group">
@@ -237,6 +395,12 @@ export default function TasksPage() {
               <p className="text-xs text-gray-400 line-clamp-2 mb-2">{task.description}</p>
             )}
             <div className="flex flex-wrap items-center gap-2 text-xs">
+              {/* Show status badge for mentor tasks */}
+              {isMentorTask && task.status !== 'pending' && (
+                <span className={`px-2 py-0.5 rounded-lg border font-semibold ${statusBadge.color}`}>
+                  {statusBadge.label}
+                </span>
+              )}
               <span className={`px-2 py-0.5 rounded-lg border font-semibold ${getPriorityColor(task.priority)}`}>
                 {task.priority}
               </span>
@@ -244,6 +408,15 @@ export default function TasksPage() {
                 <span className="text-gray-500 flex items-center gap-1">
                   <Calendar size={12} />
                   {formatDate(task.dueDate)}
+                </span>
+              )}
+              {/* Show remaining time for mentor tasks */}
+              {isMentorTask && task.expiresAt && (
+                <span className={`flex items-center gap-1 ${
+                  isTaskExpired(task) ? 'text-red-400' : 'text-blue-400'
+                }`}>
+                  <Timer size={12} />
+                  {getRemainingTime(task.expiresAt) === 'expired' ? 'Expired' : getRemainingTime(task.expiresAt)}
                 </span>
               )}
             </div>
@@ -391,22 +564,44 @@ export default function TasksPage() {
                 </div>
 
                 {formData.source === 'mentor' && (
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-400 font-semibold">Assign To *</label>
-                    <select
-                      value={formData.assignedTo}
-                      onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                      className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-                      required
-                    >
-                      <option value="">Select a student</option>
-                      {students.map(student => (
-                        <option key={student._id} value={student._id}>
-                          {student.name} ({student.email})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400 font-semibold">Assign To *</label>
+                      <select
+                        value={formData.assignedTo}
+                        onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                        className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+                        required
+                      >
+                        <option value="">Select a student</option>
+                        {students.map(student => (
+                          <option key={student._id} value={student._id}>
+                            {student.name} ({student.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400 font-semibold">Time Limit (optional)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="24"
+                          value={formData.timeLimit}
+                          onChange={(e) => setFormData({ ...formData, timeLimit: e.target.value })}
+                          className="flex-1 bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition"
+                        />
+                        <span className="flex items-center px-3 bg-[#111625] border border-gray-800 rounded-xl text-xs text-gray-400">
+                          hours
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        Task will expire after this duration from assignment time
+                      </p>
+                    </div>
+                  </>
                 )}
               </>
             )}
@@ -435,6 +630,11 @@ export default function TasksPage() {
   const TaskViewModal = ({ isOpen, onClose, task }) => {
     if (!isOpen || !task) return null;
 
+    // Use the enhanced modal for mentor tasks, simple view for self tasks
+    if (task.source === 'mentor') {
+      return null; // Will be replaced by TaskViewModalEnhanced below
+    }
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
         <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
@@ -456,10 +656,10 @@ export default function TasksPage() {
             <div className="space-y-2 pt-2 border-t border-gray-900">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-500 font-semibold">Status:</span>
-                <span className={`px-2 py-1 rounded-lg font-semibold ${
+                <span className={`px-2 py-1 rounded-lg font-semibold border ${
                   task.status === 'completed' 
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                    : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                    : 'bg-gray-500/10 text-gray-400 border-gray-500/20'
                 }`}>
                   {task.status === 'completed' ? 'Completed' : 'Pending'}
                 </span>
@@ -476,20 +676,6 @@ export default function TasksPage() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-500 font-semibold">Due Date:</span>
                   <span className="text-gray-300">{formatDate(task.dueDate)}</span>
-                </div>
-              )}
-
-              {task.source === 'mentor' && task.createdBy && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500 font-semibold">Assigned by:</span>
-                  <span className="text-gray-300">{task.createdBy.name || 'Mentor'}</span>
-                </div>
-              )}
-
-              {task.assignedAt && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500 font-semibold">Assigned on:</span>
-                  <span className="text-gray-300">{formatDate(task.assignedAt)}</span>
                 </div>
               )}
             </div>
@@ -610,11 +796,64 @@ export default function TasksPage() {
         isEdit={true}
       />
 
-      <TaskViewModal 
-        isOpen={viewModalOpen} 
-        onClose={() => { setViewModalOpen(false); setSelectedTask(null); }} 
+      {/* Use simple modal for self tasks, enhanced for mentor tasks */}
+      {selectedTask?.source === 'self' && (
+        <TaskViewModal 
+          isOpen={viewModalOpen} 
+          onClose={() => { setViewModalOpen(false); setSelectedTask(null); }} 
+          task={selectedTask}
+        />
+      )}
+
+      {selectedTask?.source === 'mentor' && (
+        <TaskViewModalEnhanced 
+          isOpen={viewModalOpen} 
+          onClose={() => { setViewModalOpen(false); setSelectedTask(null); }} 
+          task={selectedTask}
+          user={user}
+          onSubmit={(task) => {
+            setViewModalOpen(false);
+            openSubmitModal(task);
+          }}
+          onReview={(task, submission) => {
+            setViewModalOpen(false);
+            openReviewModal(task, submission);
+          }}
+          getPriorityColor={getPriorityColor}
+        />
+      )}
+
+      {/* Submission Modal */}
+      <TaskSubmissionModal
+        isOpen={submitModalOpen}
+        onClose={() => {
+          setSubmitModalOpen(false);
+          resetSubmissionForm();
+          setValidationError('');
+        }}
         task={selectedTask}
+        onSubmit={handleSubmitTask}
+        isLoading={submissionLoading}
+        validationError={validationError}
       />
+
+      {/* Review Modal */}
+      {selectedTask && selectedSubmission && (
+        <TaskReviewModal
+          isOpen={reviewModalOpen}
+          onClose={() => {
+            setReviewModalOpen(false);
+            resetReviewForm();
+            setValidationError('');
+          }}
+          task={selectedTask}
+          submissions={[selectedSubmission]}
+          onApprove={(submissionId, feedback) => handleReviewSubmission('approve')}
+          onReject={(submissionId, feedback) => handleReviewSubmission('reject')}
+          isLoading={reviewLoading}
+          validationError={validationError}
+        />
+      )}
 
       {/* Toast */}
       {toastMessage && (

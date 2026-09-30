@@ -6,7 +6,7 @@ export const apiSlice = createApi({
     baseUrl: `${import.meta.env.VITE_API_URL || ''}/api/`,
     credentials: 'include'
   }),
-  tagTypes: ['Journal', 'DashboardStats', 'Event', 'StudyPlan', 'Task'],
+  tagTypes: ['Journal', 'DashboardStats', 'Event', 'StudyPlan', 'Task', 'TaskSubmission'],
   endpoints: (builder) => ({
     getJournals: builder.query({
       query: (studentId) => `journal/${studentId}`,
@@ -221,6 +221,28 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['Task'],
     }),
+
+    // --- Task Submissions ---
+    submitTask: builder.mutation({
+      query: ({ id, formData }) => ({
+        url: `tasks/${id}/submit`,
+        method: 'POST',
+        body: formData,
+      }),
+      invalidatesTags: ['Task', 'TaskSubmission'],
+    }),
+    getTaskSubmissions: builder.query({
+      query: (taskId) => `tasks/${taskId}/submissions`,
+      providesTags: ['TaskSubmission'],
+    }),
+    reviewSubmission: builder.mutation({
+      query: ({ submissionId, action, feedback }) => ({
+        url: `tasks/submissions/${submissionId}/review`,
+        method: 'PATCH',
+        body: { action, feedback },
+      }),
+      invalidatesTags: ['Task', 'TaskSubmission'],
+    }),
   }),
 });
 
@@ -268,5 +290,10 @@ export const {
   useGetStudentsQuery,
   useCreateTaskMutation,
   useUpdateTaskMutation,
-  useDeleteTaskMutation
+  useDeleteTaskMutation,
+
+  // Task Submissions Hooks
+  useSubmitTaskMutation,
+  useGetTaskSubmissionsQuery,
+  useReviewSubmissionMutation
 } = apiSlice;

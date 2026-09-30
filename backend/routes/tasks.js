@@ -98,7 +98,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // ==========================================
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { title, description, dueDate, priority, source, assignedTo } = req.body;
+    const { title, description, dueDate, priority, source, assignedTo, timeLimit } = req.body;
 
     // Validation: title is required
     if (!title || !title.trim()) {
@@ -123,6 +123,13 @@ router.post('/', authMiddleware, async (req, res) => {
         return res.status(404).json({ message: 'Target student not found' });
       }
 
+      // Calculate expiresAt if timeLimit is provided
+      const assignedAt = new Date();
+      let expiresAt = null;
+      if (timeLimit && timeLimit > 0) {
+        expiresAt = new Date(assignedAt.getTime() + timeLimit * 60 * 60 * 1000); // timeLimit in hours
+      }
+
       const newTask = await Task.create({
         title: title.trim(),
         description: description ? description.trim() : '',
@@ -131,7 +138,9 @@ router.post('/', authMiddleware, async (req, res) => {
         source: 'mentor',
         createdBy: req.user.id,
         assignedTo: targetStudent._id,
-        assignedAt: new Date(),
+        assignedAt: assignedAt,
+        expiresAt: expiresAt,
+        timeLimit: timeLimit || null,
         status: 'pending',
       });
 
@@ -208,7 +217,18 @@ router.patch('/:id', authMiddleware, async (req, res) => {
       if (description !== undefined) task.description = description.trim();
       if (dueDate !== undefined) task.dueDate = dueDate ? new Date(dueDate) : null;
       if (priority && ['low', 'medium', 'high'].includes(priority)) task.priority = priority;
-      if (status && ['pending', 'completed'].includes(status)) task.status = status;
+      
+      // Only allow status changes for self tasks or mentor changing their own assigned tasks
+      if (status && task.source === 'self') {
+        if (['pending', 'completed'].includes(status)) {
+          task.status = status;
+        }
+      } else if (status && task.source === 'mentor' && isCreator) {
+        // Mentor can update status of their assigned tasks (for manual completion if needed)
+        if (['pending', 'submitted', 'needs_revision', 'completed', 'expired'].includes(status)) {
+          task.status = status;
+        }
+      }
     } else if (isAssignedUser) {
       // Assigned student on mentor task CANNOT change status
       // Status will be changed through submission/approval workflow in Phase 2
