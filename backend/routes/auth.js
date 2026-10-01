@@ -1,51 +1,78 @@
 import express from 'express';
 import axios from 'axios';
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import User from '../models/User.js';
+import Session from '../models/Session.js';
 import authMiddleware from '../middleware/auth.js';
+import { authLimiter, sensitiveOpsLimiter } from '../middleware/rateLimiter.js';
+import { setCsrfCookie } from '../middleware/csrfProtection.js';
 
 const router = express.Router();
 
 // ── Cookie config ──
-// NODE_ENV must be manually set to 'production' in your host's env vars — Railway does not
-// auto-inject it. RAILWAY_ENVIRONMENT_NAME is provided automatically as a fallback.
 const isProduction =
-  process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT_NAME;
+  process.env.NODE_ENV === 'production' || !!process.env.RENDER;
 
-// SameSite must be 'none' (+ secure) when frontend and backend are on different registrable
-// domains (e.g. Vercel frontend -> Railway backend), since 'lax' cookies are not sent on
-// cross-site fetch/XHR calls. Only use 'lax' if both apps share a domain via COOKIE_DOMAIN.
 const resolvedSameSite = isProduction
   ? (process.env.COOKIE_DOMAIN ? 'lax' : 'none')
   : 'lax';
 
 const cookieOptions = {
   httpOnly: true,
-  secure: isProduction, // required whenever sameSite is 'none'; 'none' only occurs when isProduction is true
+  secure: isProduction,
   sameSite: resolvedSameSite,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days default (overridden per-login below)
+  maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
-// If custom domains share same registrable domain (e.g. app.domain.com and api.domain.com),
-// set COOKIE_DOMAIN=.domain.com in environment variables.
 if (isProduction && process.env.COOKIE_DOMAIN) {
   cookieOptions.domain = process.env.COOKIE_DOMAIN;
 }
 
-// ── Helper: generate JWT ──
-function signToken(user, expiresIn = '7d') {
-  return jwt.sign(
-    { id: user._id, email: user.email, name: user.name, picture: user.picture },
-    process.env.JWT_SECRET,
-    { expiresIn }
-  );
+// ── Session Helpers ──
+function generateSessionToken() {
+  return crypto.randomBytes(32).toString('hex');
 }
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function createServerSession(user, req, remember = false) {
+  const rawToken = generateSessionToken();
+  const tokenHash = hashToken(rawToken);
+
+  const durationDays = remember ? 30 : 1;
+  const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+
+  const userAgent = (req.get('User-Agent') || '').substring(0, 255);
+  const ipAddress = req.ip || req.socket?.remoteAddress || '';
+
+  await Session.create({
+    userId: user._id,
+    tokenHash,
+    userAgent,
+    ipAddress,
+    isValid: true,
+    expiresAt,
+    lastActivityAt: new Date(),
+  });
+
+  return { rawToken, durationDays };
+}
+
+// ==============================
+// CSRF Token Endpoint
+// ==============================
+router.get('/csrf-token', (req, res) => {
+  const csrfToken = setCsrfCookie(req, res);
+  res.json({ success: true, csrfToken });
+});
 
 // ==============================
 // Email/Password Signup
 // ==============================
-router.post('/signup', async (req, res) => {
+router.post('/signup', authLimiter, async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
 
@@ -55,13 +82,23 @@ router.post('/signup', async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    const pwRegex = /^(?=.*[A-Z])(?=.*[$@!%*?&]).{8,}$/;
+    if (!pwRegex.test(password)) {
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters long and contain at least one uppercase letter and one special character ($@!%*?&)',
+      });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
-      // If the existing user signed up via Google and has no password,
-      // allow them to add a password to enable manual login
+      // If existing user signed up via Google and has no password, allow setting a password
       if (existingUser.googleId && !existingUser.password) {
         const salt = await bcrypt.genSalt(12);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -69,8 +106,10 @@ router.post('/signup', async (req, res) => {
         if (name.trim()) existingUser.name = name.trim();
         await existingUser.save();
 
-        const token = signToken(existingUser);
-        res.cookie('token', token, cookieOptions);
+        const { rawToken, durationDays } = await createServerSession(existingUser, req, true);
+        const loginCookieOptions = { ...cookieOptions, maxAge: durationDays * 24 * 60 * 60 * 1000 };
+        res.cookie('token', rawToken, loginCookieOptions);
+        setCsrfCookie(req, res);
         return res.status(200).json({
           user: { _id: existingUser._id, name: existingUser.name, email: existingUser.email, picture: existingUser.picture },
         });
@@ -90,9 +129,12 @@ router.post('/signup', async (req, res) => {
       phone: phone ? phone.trim() : undefined,
     });
 
-    // Set JWT cookie and return user
-    const token = signToken(user);
-    res.cookie('token', token, cookieOptions);
+    // Create server session & set HTTP-only cookie
+    const { rawToken, durationDays } = await createServerSession(user, req, true);
+    const loginCookieOptions = { ...cookieOptions, maxAge: durationDays * 24 * 60 * 60 * 1000 };
+    res.cookie('token', rawToken, loginCookieOptions);
+    setCsrfCookie(req, res);
+
     res.status(201).json({
       user: { _id: user._id, name: user.name, email: user.email, picture: user.picture, phone: user.phone },
     });
@@ -106,7 +148,7 @@ router.post('/signup', async (req, res) => {
 // ==============================
 // Email/Password Login
 // ==============================
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email, password, remember } = req.body;
 
@@ -122,8 +164,6 @@ router.post('/login', async (req, res) => {
       return res.status(404).json({ message: 'No account found with this email. Please sign up first.' });
     }
 
-    // If user signed up via Google and hasn't set a password yet,
-    // guide them to create one via the Sign Up tab
     if (!user.password) {
       return res.status(400).json({
         message: 'No password set for this account. Please use the Sign Up tab to create a password, or continue with Google.',
@@ -137,19 +177,18 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Set JWT cookie and return user — token expiry must match cookie maxAge
-    const expiresIn = remember ? '30d' : '1d';
-    const token = signToken(user, expiresIn);
+    // Create server-side session
+    const { rawToken, durationDays } = await createServerSession(user, req, remember);
 
-    // Customize cookie options based on remember checkbox
     const loginCookieOptions = { ...cookieOptions };
     if (!remember) {
-      delete loginCookieOptions.maxAge; // session cookie, cleared on browser close (JWT still caps at 1d)
+      delete loginCookieOptions.maxAge; // Session cookie cleared on browser exit
     } else {
-      loginCookieOptions.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+      loginCookieOptions.maxAge = durationDays * 24 * 60 * 60 * 1000;
     }
 
-    res.cookie('token', token, loginCookieOptions);
+    res.cookie('token', rawToken, loginCookieOptions);
+    setCsrfCookie(req, res);
     res.json({
       user: { _id: user._id, name: user.name, email: user.email, picture: user.picture },
     });
@@ -167,10 +206,8 @@ router.get('/google/callback', async (req, res) => {
   const { code, state } = req.query;
   if (!code) return res.status(400).json({ message: 'No authorization code received' });
 
-  // 1. Determine redirect URI for code exchange dynamically or from env
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
 
-  // 2. Determine target frontend URL for browser redirect
   let targetFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
   if (state) {
     try {
@@ -183,7 +220,6 @@ router.get('/google/callback', async (req, res) => {
           allowedHosts.push(new URL(process.env.FRONTEND_URL).hostname);
         } catch (_) {}
       }
-      // Allow localhost, the configured FRONTEND_URL host, or any vercel.app domains
       const isAllowed = allowedHosts.includes(stateHost) || stateHost.endsWith('.vercel.app');
       if (isAllowed) {
         targetFrontendUrl = parsedStateUrl.origin;
@@ -193,11 +229,9 @@ router.get('/google/callback', async (req, res) => {
     }
   }
 
-  // Clean up targetFrontendUrl to prevent path double-redirects
   targetFrontendUrl = targetFrontendUrl.replace(/\/$/, '').replace(/\/auth$/, '');
 
   try {
-    // 1️⃣ Exchange code → access token
     const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
       client_id: process.env.GOOGLE_CLIENT_ID,
       client_secret: process.env.GOOGLE_CLIENT_SECRET,
@@ -208,32 +242,32 @@ router.get('/google/callback', async (req, res) => {
 
     const accessToken = tokenRes.data.access_token;
 
-    // 2️⃣ Fetch Google profile
     const profileRes = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     const { id: googleId, email, name, picture } = profileRes.data;
 
-    // 3️⃣ Find or create user in MongoDB
     let user = await User.findOne({ googleId });
     if (!user) {
       user = await User.create({ googleId, email, name, picture });
     } else {
-      // Update profile data on each login
       user.name = name;
       user.email = email;
       user.picture = picture;
       await user.save();
     }
 
-    // 4️⃣ Set JWT cookie directly and redirect to frontend home
-    const token = signToken(user);
-    res.cookie('token', token, cookieOptions);
+    // Create server session & set cookie
+    const { rawToken, durationDays } = await createServerSession(user, req, true);
+    const loginCookieOptions = { ...cookieOptions, maxAge: durationDays * 24 * 60 * 60 * 1000 };
+    res.cookie('token', rawToken, loginCookieOptions);
+    setCsrfCookie(req, res);
+
     res.redirect(targetFrontendUrl);
 
   } catch (error) {
-    console.error('Google OAuth error:', error.response?.data || error.message);
+    console.error('Google OAuth error:', error.message);
     res.redirect(`${targetFrontendUrl}/auth?error=oauth_failed`);
   }
 });
@@ -254,8 +288,19 @@ router.put('/daily-target', authMiddleware, async (req, res) => {
     user.dailyTarget = dailyTarget;
     await user.save();
 
-    res.json({ success: true, message: 'Daily target updated successfully', user });
+    const sanitizedUser = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      picture: user.picture,
+      phone: user.phone,
+      role: user.role,
+      dailyTarget: user.dailyTarget,
+    };
+
+    res.json({ success: true, message: 'Daily target updated successfully', user: sanitizedUser });
   } catch (error) {
+    console.error('Daily target update error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -265,18 +310,32 @@ router.put('/daily-target', authMiddleware, async (req, res) => {
 // ==============================
 router.get('/me', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-__v');
+    const user = await User.findById(req.user.id).select('-password -otp_code -otp_expiry -__v');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ user });
   } catch (error) {
+    console.error('Get user error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
 // ==============================
-// Logout — clear cookie
+// Logout — revoke server-side session & clear cookie
 // ==============================
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
+  try {
+    const rawToken = req.cookies?.token;
+    if (rawToken) {
+      const tokenHash = hashToken(rawToken);
+      await Session.updateOne(
+        { tokenHash },
+        { $set: { isValid: false, revokedAt: new Date() } }
+      );
+    }
+  } catch (error) {
+    console.error('Logout revocation error:', error.message);
+  }
+
   const clearCookieOptions = {
     httpOnly: true,
     secure: isProduction,
@@ -287,6 +346,33 @@ router.post('/logout', (req, res) => {
   }
   res.clearCookie('token', clearCookieOptions);
   res.json({ message: 'Logged out' });
+});
+
+// ==============================
+// Logout from all devices (protected)
+// ==============================
+router.post('/logout-all', authMiddleware, sensitiveOpsLimiter, async (req, res) => {
+  try {
+    await Session.updateMany(
+      { userId: req.user.id, isValid: true },
+      { $set: { isValid: false, revokedAt: new Date() } }
+    );
+
+    const clearCookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: resolvedSameSite,
+    };
+    if (isProduction && process.env.COOKIE_DOMAIN) {
+      clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
+    }
+    res.clearCookie('token', clearCookieOptions);
+
+    res.json({ success: true, message: 'Logged out from all devices successfully' });
+  } catch (error) {
+    console.error('Logout-all error:', error.message);
+    res.status(500).json({ message: 'Server error during logout-all' });
+  }
 });
 
 export default router;
