@@ -109,6 +109,7 @@ router.post('/signup', authLimiter, async (req, res) => {
         const { rawToken, durationDays } = await createServerSession(existingUser, req, true);
         const loginCookieOptions = { ...cookieOptions, maxAge: durationDays * 24 * 60 * 60 * 1000 };
         res.cookie('token', rawToken, loginCookieOptions);
+        setCsrfCookie(req, res);
         return res.status(200).json({
           user: { _id: existingUser._id, name: existingUser.name, email: existingUser.email, picture: existingUser.picture },
         });
@@ -132,6 +133,7 @@ router.post('/signup', authLimiter, async (req, res) => {
     const { rawToken, durationDays } = await createServerSession(user, req, true);
     const loginCookieOptions = { ...cookieOptions, maxAge: durationDays * 24 * 60 * 60 * 1000 };
     res.cookie('token', rawToken, loginCookieOptions);
+    setCsrfCookie(req, res);
 
     res.status(201).json({
       user: { _id: user._id, name: user.name, email: user.email, picture: user.picture, phone: user.phone },
@@ -186,6 +188,7 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     res.cookie('token', rawToken, loginCookieOptions);
+    setCsrfCookie(req, res);
     res.json({
       user: { _id: user._id, name: user.name, email: user.email, picture: user.picture },
     });
@@ -259,6 +262,7 @@ router.get('/google/callback', async (req, res) => {
     const { rawToken, durationDays } = await createServerSession(user, req, true);
     const loginCookieOptions = { ...cookieOptions, maxAge: durationDays * 24 * 60 * 60 * 1000 };
     res.cookie('token', rawToken, loginCookieOptions);
+    setCsrfCookie(req, res);
 
     res.redirect(targetFrontendUrl);
 
