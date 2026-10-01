@@ -15,4 +15,15 @@ const userSchema = new mongoose.Schema({
   dailyTarget: { type: Number, default: 60 },
 }, { timestamps: true });
 
+// Defense-in-depth: Automatically strip sensitive credentials from JSON serialization
+userSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret.password;
+    delete ret.otp_code;
+    delete ret.otp_expiry;
+    delete ret.__v;
+    return ret;
+  },
+});
+
 export default mongoose.model('User', userSchema);
