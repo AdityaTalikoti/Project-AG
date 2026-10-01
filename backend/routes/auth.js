@@ -200,38 +200,102 @@ router.post('/login', authLimiter, async (req, res) => {
 });
 
 // ==============================
+// Google OAuth Initiation
+// ==============================
+router.get('/google', authLimiter, (req, res) => {
+  try {
+    // 1. Generate cryptographically secure state token (256 bits entropy)
+    const state = crypto.randomBytes(32).toString('hex');
+
+    // 2. Store state token in short-lived HTTP-only cookie
+    const stateCookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: resolvedSameSite,
+      maxAge: 10 * 60 * 1000, // 10 minutes
+    };
+    if (isProduction && process.env.COOKIE_DOMAIN) {
+      stateCookieOptions.domain = process.env.COOKIE_DOMAIN;
+    }
+    res.cookie('oauth_state', state, stateCookieOptions);
+
+    // 3. Construct Google authorization URL
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+
+    if (!clientId) {
+      console.error('Google OAuth Error: GOOGLE_CLIENT_ID environment variable is missing');
+      return res.status(500).json({ message: 'Google OAuth configuration error' });
+    }
+
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(clientId)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=code` +
+      `&scope=${encodeURIComponent('openid email profile')}` +
+      `&state=${encodeURIComponent(state)}` +
+      `&prompt=select_account`;
+
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.json({ success: true, url: googleAuthUrl });
+    }
+
+    res.redirect(googleAuthUrl);
+  } catch (error) {
+    console.error('Google OAuth initiation error:', error.message);
+    res.status(500).json({ message: 'Failed to initiate Google OAuth' });
+  }
+});
+
+// ==============================
 // Google OAuth Callback
 // ==============================
 router.get('/google/callback', async (req, res) => {
-  const { code, state } = req.query;
-  if (!code) return res.status(400).json({ message: 'No authorization code received' });
+  const { code, state, error: providerError } = req.query;
+  const savedState = req.cookies?.oauth_state;
+
+  let targetFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
+  targetFrontendUrl = targetFrontendUrl.replace(/\/$/, '').replace(/\/auth$/, '');
+
+  // Clear oauth_state cookie immediately after reading to prevent replay
+  const clearStateCookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: resolvedSameSite,
+  };
+  if (isProduction && process.env.COOKIE_DOMAIN) {
+    clearStateCookieOptions.domain = process.env.COOKIE_DOMAIN;
+  }
+  res.clearCookie('oauth_state', clearStateCookieOptions);
+
+  // Handle provider errors or cancellations
+  if (providerError) {
+    return res.redirect(`${targetFrontendUrl}/auth?error=access_denied`);
+  }
+
+  if (!code) {
+    return res.redirect(`${targetFrontendUrl}/auth?error=missing_code`);
+  }
+
+  // Validate cryptographic OAuth state
+  if (!state || !savedState) {
+    console.error('OAuth Callback Error: Missing state or savedState');
+    return res.redirect(`${targetFrontendUrl}/auth?error=invalid_state`);
+  }
+
+  const isStateValid =
+    state.length === savedState.length &&
+    crypto.timingSafeEqual(Buffer.from(state), Buffer.from(savedState));
+
+  if (!isStateValid) {
+    console.error('OAuth Callback Error: State mismatch');
+    return res.redirect(`${targetFrontendUrl}/auth?error=state_mismatch`);
+  }
 
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
 
-  let targetFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
-  if (state) {
-    try {
-      const decodedState = decodeURIComponent(state);
-      const parsedStateUrl = new URL(decodedState);
-      const stateHost = parsedStateUrl.hostname;
-      const allowedHosts = ['localhost', '127.0.0.1'];
-      if (process.env.FRONTEND_URL) {
-        try {
-          allowedHosts.push(new URL(process.env.FRONTEND_URL).hostname);
-        } catch (_) {}
-      }
-      const isAllowed = allowedHosts.includes(stateHost) || stateHost.endsWith('.vercel.app');
-      if (isAllowed) {
-        targetFrontendUrl = parsedStateUrl.origin;
-      }
-    } catch (e) {
-      console.error('Invalid state URL in OAuth callback:', e.message);
-    }
-  }
-
-  targetFrontendUrl = targetFrontendUrl.replace(/\/$/, '').replace(/\/auth$/, '');
-
   try {
+    // 1. Code exchange for access token
     const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
       client_id: process.env.GOOGLE_CLIENT_ID,
       client_secret: process.env.GOOGLE_CLIENT_SECRET,
@@ -242,23 +306,55 @@ router.get('/google/callback', async (req, res) => {
 
     const accessToken = tokenRes.data.access_token;
 
+    // 2. Fetch user profile from Google
     const profileRes = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    const { id: googleId, email, name, picture } = profileRes.data;
+    const { id: googleId, email, name, picture, verified_email } = profileRes.data;
 
+    if (!email) {
+      return res.redirect(`${targetFrontendUrl}/auth?error=no_email_provided`);
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // 3. Account Lookup & Safe Account Linking
     let user = await User.findOne({ googleId });
+
     if (!user) {
-      user = await User.create({ googleId, email, name, picture });
+      // Check if account with same email already exists
+      user = await User.findOne({ email: normalizedEmail });
+
+      if (user) {
+        // Safe account linking: Link googleId to existing account if Google email is verified
+        if (verified_email !== false) {
+          user.googleId = googleId;
+          if (name && !user.name) user.name = name;
+          if (picture && !user.picture) user.picture = picture;
+          await user.save();
+        } else {
+          console.error('OAuth Safety Warning: Unverified Google email attempted account linking');
+          return res.redirect(`${targetFrontendUrl}/auth?error=unverified_email`);
+        }
+      } else {
+        // Create new user account
+        user = await User.create({
+          googleId,
+          email: normalizedEmail,
+          name: name || 'Google User',
+          picture: picture || '',
+        });
+      }
     } else {
-      user.name = name;
-      user.email = email;
-      user.picture = picture;
+      // Update existing Google user profile metadata
+      if (name) user.name = name;
+      user.email = normalizedEmail;
+      if (picture) user.picture = picture;
       await user.save();
     }
 
-    // Create server session & set cookie
+    // 4. Create MongoDB server-side session & set HTTP-only cookie
     const { rawToken, durationDays } = await createServerSession(user, req, true);
     const loginCookieOptions = { ...cookieOptions, maxAge: durationDays * 24 * 60 * 60 * 1000 };
     res.cookie('token', rawToken, loginCookieOptions);
@@ -267,7 +363,7 @@ router.get('/google/callback', async (req, res) => {
     res.redirect(targetFrontendUrl);
 
   } catch (error) {
-    console.error('Google OAuth error:', error.message);
+    console.error('Google OAuth callback error:', error.message);
     res.redirect(`${targetFrontendUrl}/auth?error=oauth_failed`);
   }
 });
