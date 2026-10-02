@@ -4,7 +4,15 @@ export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ 
     baseUrl: `${import.meta.env.VITE_API_URL || ''}/api/`,
-    credentials: 'include'
+    credentials: 'include',
+    prepareHeaders: (headers) => {
+      headers.set('X-Requested-With', 'XMLHttpRequest');
+      const match = document.cookie.match(/(?:^|; )_csrf=([^;]*)/);
+      if (match && match[1]) {
+        headers.set('X-CSRF-Token', decodeURIComponent(match[1]));
+      }
+      return headers;
+    },
   }),
   tagTypes: ['Journal', 'DashboardStats', 'Event', 'StudyPlan', 'Task', 'TaskSubmission'],
   endpoints: (builder) => ({

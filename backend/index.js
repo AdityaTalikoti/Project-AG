@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 
 import authRoutes from './routes/auth.js';
 import journalRoutes from './routes/journal.js';
@@ -15,6 +16,9 @@ import aiRoutes from './routes/aiRoutes.js';
 import taskRoutes from './routes/tasks.js';
 import taskSubmissionRoutes from './routes/taskSubmissions.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { originVerification } from './middleware/csrfProtection.js';
+import { generalApiLimiter } from './middleware/rateLimiter.js';
+import { mongoSanitizerMiddleware } from './validation/sanitizer.js';
 
 dotenv.config();
 
@@ -32,14 +36,29 @@ const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5174')
 // Middleware
 // ─────────────────────────────
 app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
+app.use(
   cors({
     origin: frontendUrl,
     credentials: true,
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
+
+// Anti-CSRF Origin verification & Mongo operator sanitizer
+app.use(originVerification);
+app.use(mongoSanitizerMiddleware);
+
+// Rate Limiting
+app.use('/api/', generalApiLimiter);
 
 // ─────────────────────────────
 // Routes
