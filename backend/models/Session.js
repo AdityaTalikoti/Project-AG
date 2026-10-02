@@ -30,7 +30,6 @@ const sessionSchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
     },
     lastActivityAt: {
       type: Date,
@@ -43,6 +42,15 @@ const sessionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Defense-in-depth: Automatically strip tokenHash from JSON serialization
+sessionSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret.tokenHash;
+    delete ret.__v;
+    return ret;
+  },
+});
 
 // Automatic TTL cleanup index for MongoDB
 sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
