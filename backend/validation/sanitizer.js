@@ -54,10 +54,22 @@ export const mongoSanitizerMiddleware = (req, res, next) => {
     req.body = sanitizeMongoInput(req.body);
   }
   if (req.query && typeof req.query === 'object') {
-    req.query = sanitizeMongoInput(req.query);
+    const sanitized = sanitizeMongoInput(req.query);
+    for (const key of Object.keys(req.query)) {
+      if (!(key in sanitized)) {
+        delete req.query[key];
+      }
+    }
+    Object.assign(req.query, sanitized);
   }
   if (req.params && typeof req.params === 'object') {
-    req.params = sanitizeMongoInput(req.params);
+    const sanitized = sanitizeMongoInput(req.params);
+    for (const key of Object.keys(req.params)) {
+      if (!(key in sanitized)) {
+        delete req.params[key];
+      }
+    }
+    Object.assign(req.params, sanitized);
   }
   next();
 };

@@ -5,8 +5,15 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import Session from '../models/Session.js';
 import authMiddleware from '../middleware/auth.js';
-import { authLimiter, sensitiveOpsLimiter } from '../middleware/rateLimiter.js';
+import {
+  authLimiter,
+  sensitiveOpsLimiter,
+  forgotPasswordLimiter,
+  otpVerifyLimiter,
+  passwordResetLimiter,
+} from '../middleware/rateLimiter.js';
 import { setCsrfCookie } from '../middleware/csrfProtection.js';
+import { sendPasswordResetEmail } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -468,6 +475,294 @@ router.post('/logout-all', authMiddleware, sensitiveOpsLimiter, async (req, res)
   } catch (error) {
     console.error('Logout-all error:', error.message);
     res.status(500).json({ message: 'Server error during logout-all' });
+  }
+});
+
+// ==============================
+// 1. Request Password Reset OTP
+// ==============================
+router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ message: 'Email address is required' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (user) {
+      // Generate 6-digit cryptographically secure OTP
+      const otp = crypto.randomInt(100000, 1000000).toString();
+
+      // Salted HMAC-SHA256 hash of OTP for storage (never store plaintext OTP)
+      const otpSalt = user._id.toString() + (process.env.SESSION_SECRET || 'scholarsync-otp-salt');
+      const otpHash = crypto.createHmac('sha256', otpSalt).update(otp).digest('hex');
+
+      user.otp_code = otpHash;
+      user.otp_expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      user.otp_attempts = 0;
+      await user.save();
+
+      // Dispatch verification email (never logs or returns OTP code)
+      await sendPasswordResetEmail(user.email, otp);
+    } else {
+      // Account enumeration defense: safe timing delay
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // Always return safe, consistent response (account enumeration protection)
+    setCsrfCookie(req, res);
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, a verification code has been sent.',
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error.message);
+    res.status(500).json({ message: 'Server error processing password reset request' });
+  }
+});
+
+// ==============================
+// 2. Verify Password Reset OTP
+// ==============================
+router.post('/verify-otp', otpVerifyLimiter, async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp || typeof otp !== 'string' || otp.trim().length !== 6) {
+      return res.status(400).json({ message: 'Valid email and 6-digit verification code are required' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    const safeErrorResponse = () =>
+      res.status(400).json({ message: 'Invalid or expired verification code' });
+
+    if (!user || !user.otp_code || !user.otp_expiry) {
+      return safeErrorResponse();
+    }
+
+    // Check expiration
+    if (new Date(user.otp_expiry) < new Date()) {
+      user.otp_code = undefined;
+      user.otp_expiry = undefined;
+      user.otp_attempts = 0;
+      await user.save();
+      return safeErrorResponse();
+    }
+
+    // Check brute-force attempts
+    if ((user.otp_attempts || 0) >= 5) {
+      user.otp_code = undefined;
+      user.otp_expiry = undefined;
+      user.otp_attempts = 0;
+      await user.save();
+      return res.status(400).json({
+        message: 'Too many invalid attempts. Please request a new verification code.',
+      });
+    }
+
+    // Verify OTP hash with constant-time comparison
+    const otpSalt = user._id.toString() + (process.env.SESSION_SECRET || 'scholarsync-otp-salt');
+    const expectedHash = crypto.createHmac('sha256', otpSalt).update(otp.trim()).digest('hex');
+
+    const isMatch =
+      user.otp_code.length === expectedHash.length &&
+      crypto.timingSafeEqual(Buffer.from(user.otp_code), Buffer.from(expectedHash));
+
+    if (!isMatch) {
+      user.otp_attempts = (user.otp_attempts || 0) + 1;
+      if (user.otp_attempts >= 5) {
+        user.otp_code = undefined;
+        user.otp_expiry = undefined;
+        user.otp_attempts = 0;
+      }
+      await user.save();
+      return safeErrorResponse();
+    }
+
+    // Single-use OTP: Invalidate OTP immediately upon successful verification
+    user.otp_code = undefined;
+    user.otp_expiry = undefined;
+    user.otp_attempts = 0;
+
+    // Generate single-use reset token (32 random bytes)
+    const rawResetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(rawResetToken).digest('hex');
+
+    user.reset_token_hash = resetTokenHash;
+    user.reset_token_expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    await user.save();
+
+    // Store reset token in HttpOnly, Secure cookie (never in localStorage/URLs)
+    const resetCookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: resolvedSameSite,
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    };
+    if (isProduction && process.env.COOKIE_DOMAIN) {
+      resetCookieOptions.domain = process.env.COOKIE_DOMAIN;
+    }
+    res.cookie('reset_token', rawResetToken, resetCookieOptions);
+    setCsrfCookie(req, res);
+
+    res.json({
+      success: true,
+      message: 'Verification code confirmed. You may now reset your password.',
+    });
+  } catch (error) {
+    console.error('OTP verification error:', error.message);
+    res.status(500).json({ message: 'Server error during OTP verification' });
+  }
+});
+
+// ==============================
+// 3. Complete Password Reset
+// ==============================
+router.post('/reset-password', passwordResetLimiter, async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    const rawResetToken = req.cookies?.reset_token || req.body?.resetToken;
+
+    const clearResetCookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: resolvedSameSite,
+    };
+    if (isProduction && process.env.COOKIE_DOMAIN) {
+      clearResetCookieOptions.domain = process.env.COOKIE_DOMAIN;
+    }
+
+    if (!rawResetToken || typeof rawResetToken !== 'string') {
+      res.clearCookie('reset_token', clearResetCookieOptions);
+      return res.status(400).json({
+        message: 'Invalid or expired password reset session. Please request a new verification code.',
+      });
+    }
+
+    // Password strength validation
+    const pwRegex = /^(?=.*[A-Z])(?=.*[$@!%*?&]).{8,}$/;
+    if (!newPassword || !pwRegex.test(newPassword)) {
+      return res.status(400).json({
+        message:
+          'Password must be at least 8 characters long and contain at least one uppercase letter and one special character ($@!%*?&)',
+      });
+    }
+
+    // Query user by reset token hash
+    const resetTokenHash = crypto.createHash('sha256').update(rawResetToken).digest('hex');
+    const user = await User.findOne({ reset_token_hash: resetTokenHash });
+
+    if (!user || !user.reset_token_expiry || new Date(user.reset_token_expiry) < new Date()) {
+      res.clearCookie('reset_token', clearResetCookieOptions);
+      if (user) {
+        user.reset_token_hash = undefined;
+        user.reset_token_expiry = undefined;
+        await user.save();
+      }
+      return res.status(400).json({
+        message: 'Invalid or expired password reset session. Please request a new verification code.',
+      });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+
+    // Single-use token: invalidate reset token immediately
+    user.reset_token_hash = undefined;
+    user.reset_token_expiry = undefined;
+    await user.save();
+
+    // Clear reset token cookie
+    res.clearCookie('reset_token', clearResetCookieOptions);
+
+    // SESSION INVALIDATION: Invalidate all previous server-side sessions for this user
+    await Session.updateMany(
+      { userId: user._id, isValid: true },
+      { $set: { isValid: false, revokedAt: new Date() } }
+    );
+
+    setCsrfCookie(req, res);
+    res.json({
+      success: true,
+      message: 'Password reset successfully. Please sign in with your new password.',
+    });
+  } catch (error) {
+    console.error('Password reset error:', error.message);
+    res.status(500).json({ message: 'Server error during password reset' });
+  }
+});
+
+// ==============================
+// 4. Authenticated Password Change (Protected)
+// ==============================
+router.post('/change-password', authMiddleware, sensitiveOpsLimiter, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({
+        message: 'This account was created with Google OAuth and has no password set.',
+      });
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    // Validate new password strength
+    const pwRegex = /^(?=.*[A-Z])(?=.*[$@!%*?&]).{8,}$/;
+    if (!pwRegex.test(newPassword)) {
+      return res.status(400).json({
+        message:
+          'Password must be at least 8 characters long and contain at least one uppercase letter and one special character ($@!%*?&)',
+      });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ message: 'New password must be different from current password' });
+    }
+
+    // Hash and save new password
+    const salt = await bcrypt.genSalt(12);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    // SESSION INVALIDATION: Invalidate all OTHER sessions for this user, keeping current active
+    if (req.session?.tokenHash) {
+      await Session.updateMany(
+        { userId: user._id, tokenHash: { $ne: req.session.tokenHash }, isValid: true },
+        { $set: { isValid: false, revokedAt: new Date() } }
+      );
+    }
+
+    setCsrfCookie(req, res);
+    res.json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error.message);
+    res.status(500).json({ message: 'Server error during password change' });
   }
 });
 
