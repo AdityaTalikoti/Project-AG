@@ -21,7 +21,16 @@ export const fetchCurrentUser = createAsyncThunk(
 export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async () => {
-    await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    const csrfMatch = document.cookie.match(/(?:^|; )_csrf=([^;]*)/);
+    const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+    if (csrfMatch && csrfMatch[1]) {
+      headers['X-CSRF-Token'] = decodeURIComponent(csrfMatch[1]);
+    }
+    await fetch(`${API_BASE}/api/auth/logout`, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+    });
   }
 );
 
