@@ -15,7 +15,7 @@ import {
   Laptop
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
-import { logout } from '../store/authSlice';
+import { logoutUser } from '../store/authSlice';
 
 export default function SettingsPage() {
   const [sessions, setSessions] = useState([]);
@@ -92,7 +92,7 @@ export default function SettingsPage() {
       }
 
       if (isCurrent) {
-        dispatch(logout());
+        dispatch(logoutUser());
         return;
       }
 
