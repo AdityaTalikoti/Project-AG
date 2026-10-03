@@ -55,7 +55,8 @@ router.get('/active', authMiddleware, async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Goals active error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error fetching active goal' });
   }
 });
 

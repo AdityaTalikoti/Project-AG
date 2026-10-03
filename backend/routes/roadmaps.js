@@ -344,11 +344,10 @@ router.get('/active', authMiddleware, async (req, res) => {
       data: roadmap || null
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Roadmaps fetch error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error fetching roadmap' });
   }
 });
-
-// 2. POST /api/roadmaps/generate
 router.post('/generate', authMiddleware, handleGenerateRoadmap);
 
 // 2b. POST /api/roadmaps/analyze-suggestions
@@ -422,11 +421,10 @@ router.post('/tasks/toggle', authMiddleware, async (req, res) => {
       data: roadmap
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Roadmap task toggle error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error toggling task completion' });
   }
 });
-
-// 4. DELETE /api/roadmaps/active
 router.delete('/active', authMiddleware, async (req, res) => {
   try {
     const studentId = req.user.id;
@@ -441,22 +439,20 @@ router.delete('/active', authMiddleware, async (req, res) => {
     }
     res.json({ success: true, message: "Active roadmap deleted and associated calendar events cleared" });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Roadmap delete error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error deleting roadmap' });
   }
 });
-
-// 5. POST /api/roadmaps/archive
 router.post('/archive', authMiddleware, async (req, res) => {
   try {
     const studentId = req.user.id;
     await Roadmap.updateMany({ studentId, active: true }, { active: false });
     res.json({ success: true, message: "Active roadmap archived" });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Roadmap archive error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error archiving roadmap' });
   }
 });
-
-// 6. GET /api/roadmaps/:id/sync-status
 router.get('/:id/sync-status', authMiddleware, async (req, res) => {
   try {
     const roadmapId = req.params.id;
@@ -495,11 +491,10 @@ router.get('/:id/sync-status', authMiddleware, async (req, res) => {
 
     res.json({ success: true, status: 'Synced' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Roadmap sync-status error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error checking roadmap sync status' });
   }
 });
-
-// 7. POST /api/roadmaps/:id/sync
 router.post('/:id/sync', authMiddleware, async (req, res) => {
   try {
     const roadmapId = req.params.id;
@@ -513,7 +508,8 @@ router.post('/:id/sync', authMiddleware, async (req, res) => {
       status: 'Synced'
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Roadmap sync error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error syncing roadmap to calendar' });
   }
 });
 
