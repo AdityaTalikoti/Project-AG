@@ -51,7 +51,14 @@ export async function sendPasswordResetEmail(recipientEmail, otpCode) {
   }
 
   // Fallback when SMTP credentials are not configured:
-  // Operational log ONLY (never log the actual OTP value or token)
+  // In production, fail loudly so operators know OTP delivery is broken.
+  // In development, simulate delivery for local testing convenience.
+  if (isProduction) {
+    console.error('[EmailService] SMTP credentials are not configured. Cannot send OTP email in production.');
+    return false;
+  }
+
+  // Development simulation fallback (never log the actual OTP value)
   console.log(`[EmailService] SMTP credentials not configured. Verification email simulated for ${recipientEmail}.`);
   return true;
 }

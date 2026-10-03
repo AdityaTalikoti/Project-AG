@@ -513,7 +513,20 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
       await user.save();
 
       // Dispatch verification email (never logs or returns OTP code)
-      await sendPasswordResetEmail(user.email, otp);
+      const emailSent = await sendPasswordResetEmail(user.email, otp);
+
+      // In production: if email delivery failed (SMTP not configured), clear the OTP
+      // to prevent a misleading "code sent" message when no email was actually delivered.
+      if (!emailSent && (process.env.NODE_ENV === 'production' || !!process.env.RENDER)) {
+        user.otp_code = undefined;
+        user.otp_expiry = undefined;
+        user.otp_attempts = 0;
+        await user.save();
+        return res.status(503).json({
+          success: false,
+          message: 'Email delivery is not available. Please contact support to reset your password.',
+        });
+      }
     } else {
       // Account enumeration defense: safe timing delay
       await new Promise((resolve) => setTimeout(resolve, 100));

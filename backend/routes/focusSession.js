@@ -108,7 +108,8 @@ router.post('/', authMiddleware, async (req, res) => {
       data: session 
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Focus session error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error recording focus session' });
   }
 });
 
