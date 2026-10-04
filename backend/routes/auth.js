@@ -11,7 +11,7 @@ const router = express.Router();
 // NODE_ENV must be manually set to 'production' in your host's env vars — Railway does not
 // auto-inject it. RAILWAY_ENVIRONMENT_NAME is provided automatically as a fallback.
 const isProduction =
-  process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT_NAME;
+  process.env.NODE_ENV === 'production' || !!process.env.RENDER;
 
 // SameSite must be 'none' (+ secure) when frontend and backend are on different registrable
 // domains (e.g. Vercel frontend -> Railway backend), since 'lax' cookies are not sent on
@@ -35,10 +35,13 @@ if (isProduction && process.env.COOKIE_DOMAIN) {
 
 // ── Helper: generate JWT ──
 function signToken(user, expiresIn = '7d') {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured');
+  }
   return jwt.sign(
     { id: user._id, email: user.email, name: user.name, picture: user.picture },
     process.env.JWT_SECRET,
-    { expiresIn }
+    { algorithm: 'HS256', expiresIn }
   );
 }
 
@@ -55,6 +58,17 @@ router.post('/signup', async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    const pwRegex = /^(?=.*[A-Z])(?=.*[$@!%*?&]).{8,}$/;
+    if (!pwRegex.test(password)) {
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters long and contain at least one uppercase letter and one special character ($@!%*?&)',
+      });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email: normalizedEmail });
@@ -233,7 +247,7 @@ router.get('/google/callback', async (req, res) => {
     res.redirect(targetFrontendUrl);
 
   } catch (error) {
-    console.error('Google OAuth error:', error.response?.data || error.message);
+    console.error('Google OAuth error:', error.message);
     res.redirect(`${targetFrontendUrl}/auth?error=oauth_failed`);
   }
 });
@@ -254,8 +268,19 @@ router.put('/daily-target', authMiddleware, async (req, res) => {
     user.dailyTarget = dailyTarget;
     await user.save();
 
-    res.json({ success: true, message: 'Daily target updated successfully', user });
+    const sanitizedUser = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      picture: user.picture,
+      phone: user.phone,
+      role: user.role,
+      dailyTarget: user.dailyTarget,
+    };
+
+    res.json({ success: true, message: 'Daily target updated successfully', user: sanitizedUser });
   } catch (error) {
+    console.error('Daily target update error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -265,10 +290,11 @@ router.put('/daily-target', authMiddleware, async (req, res) => {
 // ==============================
 router.get('/me', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-__v');
+    const user = await User.findById(req.user.id).select('-password -otp_code -otp_expiry -__v');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ user });
   } catch (error) {
+    console.error('Get user error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
