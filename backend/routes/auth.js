@@ -5,6 +5,8 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import Session from '../models/Session.js';
 import authMiddleware from '../middleware/auth.js';
+import { authLimiter, sensitiveOpsLimiter } from '../middleware/rateLimiter.js';
+import { setCsrfCookie } from '../middleware/csrfProtection.js';
 
 const router = express.Router();
 
@@ -60,9 +62,17 @@ async function createServerSession(user, req, remember = false) {
 }
 
 // ==============================
+// CSRF Token Endpoint
+// ==============================
+router.get('/csrf-token', (req, res) => {
+  const csrfToken = setCsrfCookie(req, res);
+  res.json({ success: true, csrfToken });
+});
+
+// ==============================
 // Email/Password Signup
 // ==============================
-router.post('/signup', async (req, res) => {
+router.post('/signup', authLimiter, async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
 
@@ -136,7 +146,7 @@ router.post('/signup', async (req, res) => {
 // ==============================
 // Email/Password Login
 // ==============================
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email, password, remember } = req.body;
 
@@ -338,7 +348,7 @@ router.post('/logout', async (req, res) => {
 // ==============================
 // Logout from all devices (protected)
 // ==============================
-router.post('/logout-all', authMiddleware, async (req, res) => {
+router.post('/logout-all', authMiddleware, sensitiveOpsLimiter, async (req, res) => {
   try {
     await Session.updateMany(
       { userId: req.user.id, isValid: true },
