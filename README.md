@@ -565,9 +565,10 @@ Project-AG/
 # ── Database ───────────────────────────────────────────────────────────────────
 MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/scholarsync
 
-# ── Authentication ─────────────────────────────────────────────────────────────
-JWT_SECRET=your-minimum-64-character-secret-key
-JWT_EXPIRE=7d
+# ── Authentication (MongoDB server-side sessions — no JWT) ─────────────────────
+# SESSION_SECRET: Optional. Used as HMAC salt for password-reset OTPs.
+# If omitted, a built-in default salt is used.
+# SESSION_SECRET=your-random-64-char-secret
 
 # ── Google AI ──────────────────────────────────────────────────────────────────
 GEMINI_API_KEY=your-gemini-api-key
@@ -575,12 +576,20 @@ GEMINI_API_KEY=your-gemini-api-key
 # ── Google OAuth 2.0 ───────────────────────────────────────────────────────────
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:5000/api/auth/google/callback
+GOOGLE_REDIRECT_URI=http://localhost:8080/api/auth/google/callback
+
+# ── Email / Password Reset ─────────────────────────────────────────────────────
+# Required in production for password-reset OTP delivery.
+# SMTP_HOST=smtp.example.com
+# SMTP_PORT=587
+# SMTP_USER=your-smtp-username
+# SMTP_PASS=your-smtp-password
+# EMAIL_FROM="ScholarSync Security" <no-reply@yourdomain.com>
 
 # ── App ────────────────────────────────────────────────────────────────────────
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:5174
 NODE_ENV=development
-PORT=5000
+PORT=8080
 ```
 
 ---

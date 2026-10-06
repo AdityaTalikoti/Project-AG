@@ -32,7 +32,7 @@ export default function SettingsPage() {
       const match = document.cookie.match(/(?:^|;\s*)_csrf=([^;]*)/);
       if (match) return decodeURIComponent(match[1]);
       
-      const res = await fetch('/api/auth/csrf-token');
+      const res = await fetch('/api/auth/csrf-token', { credentials: 'include' });
       const data = await res.json();
       return data.csrfToken;
     } catch {
@@ -45,6 +45,7 @@ export default function SettingsPage() {
     setError(null);
     try {
       const res = await fetch('/api/auth/sessions', {
+        credentials: 'include',
         headers: {
           'Accept': 'application/json',
         },

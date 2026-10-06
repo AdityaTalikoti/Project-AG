@@ -25,7 +25,8 @@ router.post('/', authMiddleware, async (req, res) => {
     
     res.status(201).json({ success: true, data: journal });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Journal create error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error creating journal entry' });
   }
 });
 
@@ -41,7 +42,8 @@ router.get('/:studentId', authMiddleware, async (req, res) => {
     const journals = await Journal.find({ studentId }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: journals });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Journal fetch error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error fetching journal entries' });
   }
 });
 
