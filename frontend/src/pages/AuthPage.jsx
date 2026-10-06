@@ -230,10 +230,14 @@ function SignInView({ onSwitch, onForgot, onNeedPassword }) {
 //  FORGOT PASSWORD VIEW
 // ═══════════════════════════════════
 function ForgotView({ onBack }) {
-  const [step, setStep] = useState(1); // 1=input, 2=otp, 3=done
+  const [step, setStep] = useState(1); // 1=identity, 2=otp, 3=new password, 4=done
   const [identity, setIdentity] = useState('');
   const [identityError, setIdentityError] = useState('');
+  const [bannerError, setBannerError] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwError, setPwError] = useState('');
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(0);
   const [success, setSuccess] = useState('');
@@ -245,47 +249,170 @@ function ForgotView({ onBack }) {
     return () => clearInterval(id);
   }, [timer]);
 
-  const detectType = (v) => isPhone(v) ? 'phone' : 'email';
+  const getCsrfHeader = async () => {
+    let csrfMatch = document.cookie.match(/(?:^|; )_csrf=([^;]*)/);
+    let csrfToken = csrfMatch && csrfMatch[1] ? decodeURIComponent(csrfMatch[1]) : null;
+    if (!csrfToken) {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/csrf-token`, { credentials: 'include' });
+        const data = await res.json();
+        csrfToken = data.csrfToken;
+      } catch (_) {}
+    }
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    };
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+    return headers;
+  };
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    const t = detectType(identity);
-    if (t === 'email' && !emailRegex.test(identity)) { setIdentityError('Enter a valid email address'); return; }
-    if (t === 'phone' && identity.replace(/\D/g, '').length < 7) { setIdentityError('Enter a valid phone number'); return; }
+    if (!identity.trim() || !emailRegex.test(identity.trim())) {
+      setIdentityError('Please enter a valid email address');
+      return;
+    }
     setIdentityError('');
+    setBannerError('');
     setLoading(true);
-    setTimeout(() => { setLoading(false); setStep(2); setTimer(60); }, 1200);
+
+    try {
+      const headers = await getCsrfHeader();
+      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ email: identity.trim() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setBannerError(data.message || 'Request failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
+      setStep(2);
+      setTimer(60);
+    } catch (err) {
+      setBannerError('Network error. Please try again.');
+      setLoading(false);
+    }
   };
 
-  const handleVerify = (e) => {
+  const handleVerify = async (e) => {
     e.preventDefault();
-    if (otp.join('').length < 6) return;
+    const otpStr = otp.join('');
+    if (otpStr.length < 6) return;
+    setBannerError('');
     setLoading(true);
-    setTimeout(() => { setLoading(false); setStep(3); setSuccess('Verification successful! A password reset link has been sent.'); }, 1200);
+
+    try {
+      const headers = await getCsrfHeader();
+      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ email: identity.trim(), otp: otpStr }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setBannerError(data.message || 'Invalid or expired verification code');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
+      setStep(3);
+    } catch (err) {
+      setBannerError('Network error. Please try again.');
+      setLoading(false);
+    }
   };
 
-  const handleResend = () => {
+  const handleReset = async (e) => {
+    e.preventDefault();
+    if (!pwRegex.test(newPassword)) {
+      setPwError('8+ chars, 1 uppercase & 1 special ($@!%*?&)');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPwError('Passwords do not match');
+      return;
+    }
+    setPwError('');
+    setBannerError('');
+    setLoading(true);
+
+    try {
+      const headers = await getCsrfHeader();
+      const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setBannerError(data.message || 'Failed to reset password');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
+      setSuccess(data.message || 'Password reset successfully! Please sign in with your new password.');
+      setStep(4);
+    } catch (err) {
+      setBannerError('Network error. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
     if (timer > 0) return;
     setTimer(60);
-    // simulate resend
+    setBannerError('');
+    try {
+      const headers = await getCsrfHeader();
+      await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ email: identity.trim() }),
+      });
+    } catch (_) {}
   };
 
   return (
     <div>
       <button type="button" className="auth-back-btn" onClick={onBack}><BackArrow />Back to Sign In</button>
       <h2>Reset Password</h2>
-      <p className="auth-subtitle">{step === 1 ? 'Enter your email or phone number to receive a verification code.' : step === 2 ? `We sent a 6-digit code to ${identity}` : ''}</p>
-      {step === 3 && success && <div className="auth-success" role="status"><svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>{success}</div>}
+      <p className="auth-subtitle">
+        {step === 1 ? 'Enter your registered email address to receive a verification code.' :
+         step === 2 ? `We sent a 6-digit code to ${identity}` :
+         step === 3 ? 'Choose a strong new password for your account.' : ''}
+      </p>
+
+      {bannerError && <div className="auth-error-banner" role="alert" aria-live="assertive"><ErrIcon />{bannerError}</div>}
+      {step === 4 && success && <div className="auth-success" role="status"><svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>{success}</div>}
+
       {step === 1 && (
         <form onSubmit={handleSend} noValidate>
           <div className="auth-field">
-            <label htmlFor="forgot-identity">Email or Phone</label>
-            <input id="forgot-identity" className={`auth-input${identityError ? ' error' : ''}`} value={identity} onChange={e => setIdentity(e.target.value)} onBlur={() => { if (!identity.trim()) setIdentityError('This field is required'); }} placeholder="jane@example.com or +1 555..." aria-invalid={!!identityError} aria-describedby={identityError ? 'forgot-id-error' : undefined} />
+            <label htmlFor="forgot-identity">Email Address</label>
+            <input id="forgot-identity" type="email" className={`auth-input${identityError ? ' error' : ''}`} value={identity} onChange={e => setIdentity(e.target.value)} onBlur={() => { if (!identity.trim()) setIdentityError('This field is required'); }} placeholder="jane@example.com" aria-invalid={!!identityError} aria-describedby={identityError ? 'forgot-id-error' : undefined} />
             {identityError && <p className="auth-error-msg" id="forgot-id-error" role="alert"><ErrIcon />{identityError}</p>}
           </div>
           <button type="submit" className="auth-submit" disabled={loading} id="forgot-send-btn">{loading ? <span className="auth-spinner" /> : 'Send Verification Code'}</button>
         </form>
       )}
+
       {step === 2 && (
         <form onSubmit={handleVerify} noValidate>
           <OtpInput value={otp} onChange={setOtp} />
@@ -295,7 +422,19 @@ function ForgotView({ onBack }) {
           </div>
         </form>
       )}
-      {step === 3 && <button type="button" className="auth-submit" onClick={onBack}>Back to Sign In</button>}
+
+      {step === 3 && (
+        <form onSubmit={handleReset} noValidate>
+          <PasswordInput id="reset-new-password" label="New Password" value={newPassword} onChange={(v) => setNewPassword(v)} error={pwError} showMeter />
+          <div className="auth-field" style={{ marginTop: '1rem' }}>
+            <label htmlFor="reset-confirm-password">Confirm New Password</label>
+            <input id="reset-confirm-password" type="password" className="auth-input" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" />
+          </div>
+          <button type="submit" className="auth-submit" disabled={loading} id="reset-submit-btn" style={{ marginTop: '1.5rem' }}>{loading ? <span className="auth-spinner" /> : 'Update Password'}</button>
+        </form>
+      )}
+
+      {step === 4 && <button type="button" className="auth-submit" onClick={onBack}>Back to Sign In</button>}
     </div>
   );
 }

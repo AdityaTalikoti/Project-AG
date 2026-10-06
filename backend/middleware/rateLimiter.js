@@ -47,3 +47,51 @@ export const generalApiLimiter = rateLimit({
   },
   statusCode: 429,
 });
+
+/**
+ * Forgot Password Request Rate Limiter.
+ * Prevents reset-request abuse and email flooding.
+ */
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many password reset requests from this IP. Please try again after 15 minutes.',
+  },
+  statusCode: 429,
+});
+
+/**
+ * OTP Verification Rate Limiter.
+ * Protects against OTP brute-force attacks.
+ */
+export const otpVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many OTP verification attempts from this IP. Please try again after 15 minutes.',
+  },
+  statusCode: 429,
+});
+
+/**
+ * Password Reset Completion Rate Limiter.
+ * Protects reset submission endpoint against brute force or replay.
+ */
+export const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many password reset attempts from this IP. Please try again after 15 minutes.',
+  },
+  statusCode: 429,
+});

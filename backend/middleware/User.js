@@ -11,6 +11,9 @@ const userSchema = new mongoose.Schema({
   mentorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   otp_code: { type: String },
   otp_expiry: { type: Date },
+  otp_attempts: { type: Number, default: 0 },
+  reset_token_hash: { type: String },
+  reset_token_expiry: { type: Date },
   phone: { type: String },
   dailyTarget: { type: Number, default: 60 },
 }, { timestamps: true });
