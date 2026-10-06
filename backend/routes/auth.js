@@ -324,7 +324,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 // ==============================
 router.post('/logout', async (req, res) => {
   try {
-    const rawToken = req.cookies?.token || req.cookies?.sid;
+    const rawToken = req.cookies?.token;
     if (rawToken) {
       const tokenHash = hashToken(rawToken);
       await Session.updateOne(
@@ -345,7 +345,6 @@ router.post('/logout', async (req, res) => {
     clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
   }
   res.clearCookie('token', clearCookieOptions);
-  res.clearCookie('sid', clearCookieOptions);
   res.json({ message: 'Logged out' });
 });
 
@@ -368,7 +367,6 @@ router.post('/logout-all', authMiddleware, sensitiveOpsLimiter, async (req, res)
       clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
     }
     res.clearCookie('token', clearCookieOptions);
-    res.clearCookie('sid', clearCookieOptions);
 
     res.json({ success: true, message: 'Logged out from all devices successfully' });
   } catch (error) {

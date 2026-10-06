@@ -13,7 +13,7 @@ function hashToken(token) {
  */
 const authMiddleware = async (req, res, next) => {
   try {
-    const rawToken = req.cookies?.token || req.cookies?.sid;
+    const rawToken = req.cookies?.token;
 
     if (!rawToken) {
       return res.status(401).json({ message: 'Not authenticated' });
