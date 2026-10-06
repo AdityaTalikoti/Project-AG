@@ -14,6 +14,8 @@ import {
 } from '../middleware/rateLimiter.js';
 import { setCsrfCookie } from '../middleware/csrfProtection.js';
 import { sendPasswordResetEmail } from '../services/emailService.js';
+import { parseUserAgent } from '../utils/userAgentParser.js';
+import { isValidObjectId } from '../validation/sanitizer.js';
 
 const router = express.Router();
 
@@ -763,6 +765,124 @@ router.post('/change-password', authMiddleware, sensitiveOpsLimiter, async (req,
   } catch (error) {
     console.error('Change password error:', error.message);
     res.status(500).json({ message: 'Server error during password change' });
+  }
+});
+
+// ==============================
+// Session Management: List Active Sessions (Protected)
+// ==============================
+router.get('/sessions', authMiddleware, sensitiveOpsLimiter, async (req, res) => {
+  try {
+    const activeSessions = await Session.find({
+      userId: req.user.id,
+      isValid: true,
+      revokedAt: null,
+      expiresAt: { $gt: new Date() },
+    }).sort({ lastActivityAt: -1 });
+
+    const currentSessionId = req.session?._id?.toString();
+
+    const safeSessions = activeSessions.map((s) => {
+      const isCurrent = s._id.toString() === currentSessionId;
+      const parsed = parseUserAgent(s.userAgent);
+      return {
+        id: s._id.toString(),
+        userAgent: s.userAgent,
+        deviceDisplay: parsed.display,
+        browser: parsed.browser,
+        os: parsed.os,
+        deviceType: parsed.deviceType,
+        ipAddress: s.ipAddress || 'Unknown IP',
+        isCurrent,
+        createdAt: s.createdAt,
+        lastActivityAt: s.lastActivityAt,
+        expiresAt: s.expiresAt,
+      };
+    });
+
+    setCsrfCookie(req, res);
+    res.json({ success: true, sessions: safeSessions });
+  } catch (error) {
+    console.error('List sessions error:', error.message);
+    res.status(500).json({ message: 'Server error listing active sessions' });
+  }
+});
+
+// ==============================
+// Session Management: Revoke One Session (Protected)
+// ==============================
+router.delete('/sessions/:sessionId', authMiddleware, sensitiveOpsLimiter, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    if (!sessionId || !isValidObjectId(sessionId)) {
+      return res.status(400).json({ message: 'Invalid session identifier' });
+    }
+
+    // IDOR Protection: Query by _id AND userId to prevent revoking another user's session
+    const sessionToRevoke = await Session.findOne({
+      _id: sessionId,
+      userId: req.user.id,
+      isValid: true,
+    });
+
+    if (!sessionToRevoke) {
+      return res.status(404).json({ message: 'Session not found or already revoked' });
+    }
+
+    sessionToRevoke.isValid = false;
+    sessionToRevoke.revokedAt = new Date();
+    await sessionToRevoke.save();
+
+    // If user is revoking their own current session, clear auth cookie
+    const currentSessionId = req.session?._id?.toString();
+    if (sessionId === currentSessionId) {
+      const clearCookieOptions = {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: resolvedSameSite,
+      };
+      if (isProduction && process.env.COOKIE_DOMAIN) {
+        clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
+      }
+      res.clearCookie('token', clearCookieOptions);
+    }
+
+    setCsrfCookie(req, res);
+    res.json({ success: true, message: 'Session revoked successfully' });
+  } catch (error) {
+    console.error('Revoke session error:', error.message);
+    res.status(500).json({ message: 'Server error revoking session' });
+  }
+});
+
+// ==============================
+// Session Management: Revoke Other Sessions (Protected)
+// ==============================
+router.post('/sessions/revoke-others', authMiddleware, sensitiveOpsLimiter, async (req, res) => {
+  try {
+    const currentSessionId = req.session?._id;
+
+    if (!currentSessionId) {
+      return res.status(400).json({ message: 'Current session context not found' });
+    }
+
+    await Session.updateMany(
+      {
+        userId: req.user.id,
+        _id: { $ne: currentSessionId },
+        isValid: true,
+      },
+      {
+        $set: { isValid: false, revokedAt: new Date() },
+      }
+    );
+
+    setCsrfCookie(req, res);
+    res.json({ success: true, message: 'All other sessions revoked successfully' });
+  } catch (error) {
+    console.error('Revoke other sessions error:', error.message);
+    res.status(500).json({ message: 'Server error revoking other sessions' });
   }
 });
 
