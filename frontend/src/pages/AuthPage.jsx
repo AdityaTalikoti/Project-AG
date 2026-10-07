@@ -425,7 +425,7 @@ function ForgotView({ onBack }) {
 
       {step === 3 && (
         <form onSubmit={handleReset} noValidate>
-          <PasswordInput id="reset-new-password" label="New Password" value={newPassword} onChange={(v) => setNewPassword(v)} error={pwError} showMeter />
+          <PasswordInput id="reset-new-password" label="New Password" value={newPassword} onChange={(v) => setNewPassword(v)} error={pwError} showMeter autoComplete="new-password" />
           <div className="auth-field" style={{ marginTop: '1rem' }}>
             <label htmlFor="reset-confirm-password">Confirm New Password</label>
             <input id="reset-confirm-password" type="password" className="auth-input" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" />
