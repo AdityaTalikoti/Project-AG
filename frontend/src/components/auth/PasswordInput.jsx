@@ -19,9 +19,10 @@ function getStrength(pw) {
   return s;
 }
 
-export default function PasswordInput({ id, label, value, onChange, onBlur, error, showMeter }) {
+export default function PasswordInput({ id, label, value, onChange, onBlur, error, showMeter, autoComplete }) {
   const [show, setShow] = useState(false);
   const strength = showMeter ? getStrength(value) : 0;
+  const autoCompleteValue = autoComplete || (id === 'signup-password' ? 'new-password' : 'current-password');
 
   return (
     <div className="auth-field">
@@ -35,7 +36,7 @@ export default function PasswordInput({ id, label, value, onChange, onBlur, erro
           onChange={onChange}
           onBlur={onBlur}
           placeholder="••••••••"
-          autoComplete={id === 'signup-password' ? 'new-password' : 'current-password'}
+          autoComplete={autoCompleteValue}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
         />
