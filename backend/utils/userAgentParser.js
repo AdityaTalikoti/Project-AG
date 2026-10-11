@@ -2,6 +2,14 @@
  * Safe, dependency-free User-Agent parser utility for ScholarSync.
  * Extracts approximate Browser, Operating System, and Device Type metadata
  * without introducing heavy third-party parsing dependencies or ReDoS risks.
+ *
+ * @param {string} [uaString=''] - Raw User-Agent header string from the incoming HTTP request.
+ * @returns {{
+ *   browser: string,
+ *   os: string,
+ *   deviceType: ('Desktop'|'Mobile'|'Tablet'),
+ *   display: string
+ * }} Structured client environment metadata for session tracking.
  */
 export function parseUserAgent(uaString = '') {
   if (!uaString || typeof uaString !== 'string') {
