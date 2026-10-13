@@ -199,7 +199,7 @@ router.post('/login', authLimiter, async (req, res) => {
     res.cookie('token', rawToken, loginCookieOptions);
     setCsrfCookie(req, res);
     res.json({
-      user: { _id: user._id, name: user.name, email: user.email, picture: user.picture },
+      user: { _id: user._id, name: user.name, email: user.email, picture: user.picture, role: user.role },
     });
 
   } catch (error) {
