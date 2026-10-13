@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchCurrentUser, setCredentials } from '../store/authSlice';
+import { setCredentials } from '../store/authSlice';
 import PasswordInput from '../components/auth/PasswordInput';
 import PhoneInput from '../components/auth/PhoneInput';
 import OtpInput from '../components/auth/OtpInput';
@@ -13,7 +13,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // ── Validation helpers ──
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const pwRegex = /^(?=.*[A-Z])(?=.*[$@!%*?&]).{8,}$/;
-const isPhone = (v) => /^\+?\d[\d\s\-()]{6,}$/.test(v);
+// isPhone removed — phone-based auth not used in current signup flow
 
 function BrandPanel() {
   return (
@@ -105,7 +105,7 @@ function SignUpView({ onSwitch, initialEmail = '' }) {
       // Success — set auth state and navigate
       dispatch(setCredentials(data.user));
       navigate('/dashboard');
-    } catch (err) {
+    } catch {
       setBanner('Network error. Please try again.');
       setLoading(false);
     }
@@ -197,7 +197,7 @@ function SignInView({ onSwitch, onForgot, onNeedPassword }) {
       // Success — set auth state and navigate
       dispatch(setCredentials(data.user));
       navigate('/dashboard');
-    } catch (err) {
+    } catch {
       setBanner('Network error. Please try again.');
       setLoading(false);
     }
@@ -257,7 +257,7 @@ function ForgotView({ onBack }) {
         const res = await fetch(`${API_BASE}/api/auth/csrf-token`, { credentials: 'include' });
         const data = await res.json();
         csrfToken = data.csrfToken;
-      } catch (_) {}
+      } catch { /* swallow — CSRF prefetch is best-effort */ }
     }
     const headers = {
       'Content-Type': 'application/json',
@@ -298,7 +298,7 @@ function ForgotView({ onBack }) {
       setLoading(false);
       setStep(2);
       setTimer(60);
-    } catch (err) {
+    } catch {
       setBannerError('Network error. Please try again.');
       setLoading(false);
     }
@@ -329,7 +329,7 @@ function ForgotView({ onBack }) {
 
       setLoading(false);
       setStep(3);
-    } catch (err) {
+    } catch {
       setBannerError('Network error. Please try again.');
       setLoading(false);
     }
@@ -368,7 +368,7 @@ function ForgotView({ onBack }) {
       setLoading(false);
       setSuccess(data.message || 'Password reset successfully! Please sign in with your new password.');
       setStep(4);
-    } catch (err) {
+    } catch {
       setBannerError('Network error. Please try again.');
       setLoading(false);
     }
@@ -386,7 +386,7 @@ function ForgotView({ onBack }) {
         credentials: 'include',
         body: JSON.stringify({ email: identity.trim() }),
       });
-    } catch (_) {}
+    } catch { /* swallow — resend is fire-and-forget */ }
   };
 
   return (
