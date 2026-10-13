@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { fetchCurrentUser } from './store/authSlice';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import MentorProtectedRoute from './components/MentorProtectedRoute';
 import Home from './pages/Home';
 import JournalPage from './pages/JournalPage';
 import AuthPage from './pages/AuthPage';
@@ -14,6 +15,11 @@ import CalendarPage from './pages/CalendarPage';
 import AIMentor from './pages/AIMentor';
 import TasksPage from './pages/TasksPage';
 import SettingsPage from './pages/SettingsPage';
+import MentorLayout from './mentor/MentorLayout';
+import MentorDashboard from './mentor/MentorDashboard';
+import MentorTasksPage from './mentor/MentorTasksPage';
+import MentorStudentsPage from './mentor/MentorStudentsPage';
+import MentorSubmissionsPage from './mentor/MentorSubmissionsPage';
 
 function App() {
   const dispatch = useDispatch();
@@ -31,7 +37,7 @@ function App() {
         <Route path="/" element={<AuthPage />} />
         <Route path="/auth" element={<AuthPage />} />
 
-        {/* Protected routes */}
+        {/* ── Student protected routes ── */}
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Layout />
@@ -57,6 +63,18 @@ function App() {
             <FocusTimerPage />
           </ProtectedRoute>
         } />
+
+        {/* ── Mentor portal protected routes ── */}
+        <Route path="/mentor-portal" element={
+          <MentorProtectedRoute>
+            <MentorLayout />
+          </MentorProtectedRoute>
+        }>
+          <Route index element={<MentorDashboard />} />
+          <Route path="tasks" element={<MentorTasksPage />} />
+          <Route path="students" element={<MentorStudentsPage />} />
+          <Route path="submissions" element={<MentorSubmissionsPage />} />
+        </Route>
 
       </Routes>
     </BrowserRouter>
