@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Task from '../models/Task.js';
+import TaskSubmission from '../models/TaskSubmission.js';
 import User from '../models/User.js';
 import authMiddleware from '../middleware/auth.js';
 
@@ -40,8 +41,20 @@ router.get('/', authMiddleware, async (req, res) => {
 // ==========================================
 router.get('/students', authMiddleware, async (req, res) => {
   try {
-    // Return all students
-    const students = await User.find({ role: 'Student' })
+    const user = req.user;
+
+    // Authorization: only Mentors can list students, and only students
+    // assigned to the mentor (via mentorId relationship) are shown.
+    // Students cannot access this endpoint.
+    if (user.role !== 'Mentor') {
+      return res.status(403).json({ message: 'Unauthorized: Students cannot list students' });
+    }
+
+    // Mentors can only see students who have a mentorId relationship
+    // with them (i.e., students they are assigned to mentor).
+    // This ensures mentors cannot arbitrarily assign tasks to any student.
+    const mentorId = user.id;
+    const students = await User.find({ role: 'Student', mentorId: mentorId })
       .select('name email picture domain mentorId')
       .sort({ name: 1 });
 
@@ -52,6 +65,52 @@ router.get('/students', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Error fetching students:', error.message);
     res.status(500).json({ message: 'Server error while fetching students' });
+  }
+});
+
+// ==========================================
+// GET /api/tasks/mentor/submissions �?" Pending review submissions
+// ==========================================
+router.get('/mentor/submissions', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id.toString();
+
+    // Authorization: only Mentors can access this endpoint
+    const user = await User.findById(userId);
+    if (!user || user.role !== 'Mentor') {
+      return res.status(403).json({ message: 'Unauthorized: Only mentors can access submissions' });
+    }
+
+    // Find tasks created by this mentor with source: 'mentor'
+    const mentorTasks = await Task.find({ createdBy: userId, source: 'mentor' });
+
+    if (mentorTasks.length === 0) {
+      return res.json({
+        success: true,
+        count: 0,
+        data: [],
+      });
+    }
+
+    // Get task IDs
+    const taskIds = mentorTasks.map((t) => t._id);
+
+    // Find pending_review submissions for these mentor-created tasks
+    const submissions = await TaskSubmission.find({
+      task: { $in: taskIds },
+      status: 'pending_review',
+    })
+      .populate('submittedBy', 'name email picture')
+      .populate('task', 'title');
+
+    res.json({
+      success: true,
+      count: submissions.length,
+      data: submissions,
+    });
+  } catch (error) {
+    console.error('Error fetching mentor submissions:', error.message);
+    res.status(500).json({ message: 'Server error while fetching mentor submissions' });
   }
 });
 
@@ -118,9 +177,16 @@ router.post('/', authMiddleware, async (req, res) => {
         return res.status(400).json({ message: 'Valid student ID (assignedTo) is required for mentor tasks' });
       }
 
+      // Verify target student exists, is a Student, and belongs to this mentor
       const targetStudent = await User.findById(assignedTo);
       if (!targetStudent) {
         return res.status(404).json({ message: 'Target student not found' });
+      }
+      if (targetStudent.role !== 'Student') {
+        return res.status(400).json({ message: 'assignedTo must reference a Student account' });
+      }
+      if (!targetStudent.mentorId || targetStudent.mentorId.toString() !== req.user.id) {
+        return res.status(403).json({ message: 'Unauthorized: This student is not assigned to you' });
       }
 
       // Calculate expiresAt if timeLimit is provided
