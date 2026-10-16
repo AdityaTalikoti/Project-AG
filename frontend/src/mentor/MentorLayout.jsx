@@ -8,7 +8,7 @@ import './mentor.css';
  *
  * Features:
  * - Fixed sidebar with vertical navigation using NavLink
- * - Topbar with profile/logout and theme toggle
+ * - Top bar with profile/logout and theme toggle
  * - Responsive: sidebar collapses on mobile
  * - Outlet for nested mentor-portal routes
  * - Accessible focus states and ARIA labels
@@ -38,7 +38,7 @@ export default function MentorLayout() {
         fontFamily: 'inherit',
       }}
     >
-      {/* ── Topbar ── */}
+      {/* ── Top bar ── */}
       <header
         style={{
           display: 'flex',
