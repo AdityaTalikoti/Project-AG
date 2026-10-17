@@ -243,6 +243,10 @@ export const apiSlice = createApi({
       query: (taskId) => `tasks/${taskId}/submissions`,
       providesTags: ['TaskSubmission'],
     }),
+    getMentorSubmissions: builder.query({
+      query: () => 'tasks/mentor/submissions',
+      providesTags: ['TaskSubmission'],
+    }),
     reviewSubmission: builder.mutation({
       query: ({ submissionId, action, feedback }) => ({
         url: `tasks/submissions/${submissionId}/review`,
@@ -303,5 +307,6 @@ export const {
   // Task Submissions Hooks
   useSubmitTaskMutation,
   useGetTaskSubmissionsQuery,
+  useGetMentorSubmissionsQuery,
   useReviewSubmissionMutation
 } = apiSlice;

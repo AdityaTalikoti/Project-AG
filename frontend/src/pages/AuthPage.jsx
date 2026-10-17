@@ -102,9 +102,9 @@ function SignUpView({ onSwitch, initialEmail = '' }) {
         setLoading(false);
         return;
       }
-      // Success — set auth state and navigate
+      // Success — set auth state; route by role from server response
       dispatch(setCredentials(data.user));
-      navigate('/dashboard');
+      navigate(data.user?.role === 'Mentor' ? '/mentor-portal' : '/dashboard');
     } catch {
       setBanner('Network error. Please try again.');
       setLoading(false);
@@ -194,9 +194,9 @@ function SignInView({ onSwitch, onForgot, onNeedPassword }) {
         setLoading(false);
         return;
       }
-      // Success — set auth state and navigate
+      // Success — set auth state; route by role from server response
       dispatch(setCredentials(data.user));
-      navigate('/dashboard');
+      navigate(data.user?.role === 'Mentor' ? '/mentor-portal' : '/dashboard');
     } catch {
       setBanner('Network error. Please try again.');
       setLoading(false);

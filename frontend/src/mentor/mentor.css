@@ -1,0 +1,10 @@
+/* Mentor Portal — scoped styles */
+:root {
+  --mentor-primary: #7c3aed;
+  --mentor-accent: #a78bfa;
+  --mentor-dark-surface: #1e1b2e;
+  --mentor-border: #2d2a45;
+}
+
+/* Prevent CSS from leaking out — all styles are inline in components */
+/* These utilities are available if other components import this file */
