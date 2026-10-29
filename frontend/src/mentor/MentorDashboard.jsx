@@ -1,8 +1,13 @@
 import { useSelector } from 'react-redux';
-import { useGetDashboardStatsQuery, useGetTasksQuery, useGetStudentsQuery } from '../store/apiSlice';
+import {
+  useGetDashboardStatsQuery,
+  useGetTasksQuery,
+  useGetStudentsQuery,
+  useGetMentorSubmissionsQuery,
+} from '../store/apiSlice';
 
 /**
- * Mentor Dashboard — Phase 2.
+ * Mentor Dashboard — Phase 3.
  *
  * Statistics are fetched from authorized endpoints only.
  * If an endpoint cannot reliably supply mentor-scoped data,
@@ -20,17 +25,22 @@ export default function MentorDashboard() {
 
   // Fetch all tasks — we client-filter for mentor-created tasks only.
   // This is presentation-only filtering; backend authorization is required.
-  const { data: tasksRes, isLoading: tasksLoading, isError: tasksError } = useGetTasksQuery(undefined);
+  const { data: tasksRes, isLoading: tasksLoading, isError: tasksError } = useGetTasksQuery(
+    undefined
+  );
 
   // Fetch students list — we DO NOT use client-side filtering as authorization.
   // If the API does not return mentor-scoped data, we show "—".
   const { data: studentsRes, isLoading: studentsLoading, isError: studentsError } = useGetStudentsQuery();
 
+  // Fetch mentor-submitted (pending review) submissions from the authorized API.
+  const { data: mentorSubmissionsRes, isLoading: mentorSubmissionsLoading, isError: mentorSubmissionsError } =
+    useGetMentorSubmissionsQuery();
+
   // --- Statistics ---
   let totalStudents = '—';
   let tasksAssigned = '—';
-  // pendingReviews is intentionally unavailable until a mentor-submissions API is implemented.
-  const pendingReviews = '—';
+  let pendingReviews = '—';
   let completedTasks = '—';
 
   // 1. Total Students:
@@ -48,38 +58,47 @@ export default function MentorDashboard() {
   // 2. Tasks Assigned: count mentor-created tasks.
   //    A task is "mentor-created" if source === 'mentor' and createdBy === user.id.
   if (!tasksLoading && !tasksError && tasksRes) {
-    const tasks = Array.isArray(tasksRes) ? tasksRes : [];
+    // API returns { success, count, data: [...] }
+    const tasks = Array.isArray(tasksRes?.data) ? tasksRes.data : [];
     const mentorId = user?.id;
-    if (mentorId) {
+    if ( mentorId) {
       const mentorTasks = tasks.filter(
         (t) =>
           t &&
           t.source === 'mentor' &&
           t.createdBy &&
-          String(t.createdBy) === String(mentorId)
+          String(t.createdBy._id ?? t.createdBy) === String(mentorId)
       );
       tasksAssigned = String(mentorTasks.length);
     }
   }
 
-  // 3. Pending Reviews: unavailable until mentor-submissions API exists.
+  // 3. Pending Reviews: count from authorized mentor-submissions API.
+  //    Returns pending_review submissions only for tasks created by
+  //    the authenticated mentor with source: 'mentor'.
+  if (!mentorSubmissionsLoading && !mentorSubmissionsError && mentorSubmissionsRes) {
+    // API returns { success, count, data: [...] }
+    const submissions = Array.isArray(mentorSubmissionsRes?.data) ? mentorSubmissionsRes.data : [];
+    pendingReviews = String(submissions.length);
+  }
 
   // 4. Completed Tasks: count completed tasks created by the mentor.
-    if (!tasksLoading && !tasksError && tasksRes) {
-      const tasks = Array.isArray(tasksRes) ? tasksRes : [];
-      const mentorId = user?.id;
-      if (mentorId) {
-        const completed = tasks.filter(
-          (t) =>
-            t &&
-            t.status === 'completed' &&
-            t.source === 'mentor' &&
-            t.createdBy &&
-            String(t.createdBy) === String(mentorId)
-        );
-        completedTasks = String(completed.length);
-      }
+  if (!tasksLoading && !tasksError && tasksRes) {
+    // API returns { success, count, data: [...] }
+    const tasks = Array.isArray(tasksRes?.data) ? tasksRes.data : [];
+    const mentorId = user?.id;
+    if (mentorId) {
+      const completed = tasks.filter(
+        (t) =>
+          t &&
+          t.status === 'completed' &&
+          t.source === 'mentor' &&
+          t.createdBy &&
+          String(t.createdBy._id ?? t.createdBy) === String(mentorId)
+      );
+      completedTasks = String(completed.length);
     }
+  }
 
   // --- Error handling ---
   if (statsError) {
@@ -89,6 +108,10 @@ export default function MentorDashboard() {
   if (statsLoading) {
     return <div style={{ padding: '2rem' }}>Loading dashboard statistics...</div>;
   }
+
+  // mentorSubmissionsError and mentorSubmissionsLoading are handled gracefully:
+  // pendingReviews stays '—' when the submissions query has not resolved yet,
+  // so no full-page blank is needed for this secondary query.
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -158,7 +181,7 @@ export default function MentorDashboard() {
             Pending Reviews
           </div>
           <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-            Unavailable until mentor-submissions API is implemented.
+            Data available from authorized submissions API.
           </div>
         </div>
 
