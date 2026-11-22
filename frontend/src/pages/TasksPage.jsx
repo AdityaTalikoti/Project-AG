@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { 
   useGetTasksQuery, 
@@ -7,7 +7,6 @@ import {
   useDeleteTaskMutation,
   useGetStudentsQuery,
   useSubmitTaskMutation,
-  useGetTaskSubmissionsQuery,
   useReviewSubmissionMutation
 } from '../store/apiSlice';
 import { 
@@ -18,20 +17,282 @@ import {
   Trash2, 
   Edit, 
   Check, 
-  Clock,
-  AlertCircle,
-  CheckCircle,
-  Upload,
-  FileText,
-  Image as ImageIcon,
-  Timer,
-  Send,
-  ThumbsUp,
-  ThumbsDown
+  AlertCircle, 
+  CheckCircle, 
+  Timer 
 } from 'lucide-react';
 import TaskSubmissionModal from '../components/TaskSubmissionModal';
 import TaskReviewModal from '../components/TaskReviewModal';
 import TaskViewModalEnhanced from '../components/TaskViewModalEnhanced';
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return 'No due date';
+  return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const getPriorityColor = (priority) => {
+  switch(priority) {
+    case 'high': return 'text-red-400 bg-red-500/10 border-red-500/20';
+    case 'medium': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+    case 'low': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+    default: return 'text-gray-400 bg-gray-500/10 border-gray-500/20';
+  }
+};
+
+const TaskFormModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  isEdit = false,
+  formData,
+  setFormData,
+  validationError,
+  students = [],
+  isMentor = false,
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-[#0b0e17] border border-gray-800 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center p-5 border-b border-gray-900 bg-[#0a0e1a]">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            {isEdit ? 'Edit Task' : 'Create Task'}
+          </h3>
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="text-gray-500 hover:text-white p-1 hover:bg-gray-900 rounded-lg transition cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="p-5 space-y-4 max-h-[75vh] overflow-y-auto scrollbar-thin">
+          {validationError && (
+            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
+              ⚠️ {validationError}
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <label htmlFor="task-title" className="text-xs text-gray-400 font-semibold">Title *</label>
+            <input
+              id="task-title"
+              type="text"
+              placeholder="Task title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition"
+              required
+              autoFocus
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="task-description" className="text-xs text-gray-400 font-semibold">Description</label>
+            <textarea
+              id="task-description"
+              rows={3}
+              placeholder="Task description (optional)"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition resize-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-gray-400 font-semibold">Due Date</label>
+              <input
+                type="date"
+                value={formData.dueDate}
+                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-400 font-semibold">Priority</label>
+              <select
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+
+          {!isEdit && isMentor && (
+            <>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-400 font-semibold">Task Type</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, source: 'self', assignedTo: '' })}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                      formData.source === 'self'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Personal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, source: 'mentor' })}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                      formData.source === 'mentor'
+                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                        : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Assign to Student
+                  </button>
+                </div>
+              </div>
+
+              {formData.source === 'mentor' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-semibold">Assign To *</label>
+                    <select
+                      value={formData.assignedTo}
+                      onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                      className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+                      required
+                    >
+                      <option value="">Select a student</option>
+                      {students.map(student => (
+                        <option key={student._id} value={student._id}>
+                          {student.name} ({student.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-semibold">Time Limit (optional)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="24"
+                        value={formData.timeLimit}
+                        onChange={(e) => setFormData({ ...formData, timeLimit: e.target.value })}
+                        className="flex-1 bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition"
+                      />
+                      <span className="flex items-center px-3 bg-[#111625] border border-gray-800 rounded-xl text-xs text-gray-400">
+                        hours
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Task will expire after this duration from assignment time
+                    </p>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 bg-gray-900 border border-gray-800 text-gray-300 font-semibold rounded-xl text-xs hover:bg-gray-800 transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-semibold rounded-xl text-xs transition shadow-lg cursor-pointer"
+            >
+              {isEdit ? 'Update Task' : 'Create Task'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const TaskViewModal = ({ isOpen, onClose, task }) => {
+  if (!isOpen || !task) return null;
+
+  if (task.source === 'mentor') {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-center p-5 border-b border-gray-900 bg-[#0a0e1a]">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Task Details</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white p-1 hover:bg-gray-900 rounded-lg transition cursor-pointer">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <h4 className="text-lg font-bold text-white mb-2">{task.title}</h4>
+            {task.description && (
+              <p className="text-sm text-gray-400 leading-relaxed">{task.description}</p>
+            )}
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-gray-900">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500 font-semibold">Status:</span>
+              <span className={`px-2 py-1 rounded-lg font-semibold border ${
+                task.status === 'completed' 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                  : 'bg-gray-500/10 text-gray-400 border-gray-500/20'
+              }`}>
+                {task.status === 'completed' ? 'Completed' : 'Pending'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500 font-semibold">Priority:</span>
+              <span className={`px-2 py-1 rounded-lg border font-semibold ${getPriorityColor(task.priority)}`}>
+                {task.priority}
+              </span>
+            </div>
+
+            {task.dueDate && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500 font-semibold">Due Date:</span>
+                <span className="text-gray-300">{formatDate(task.dueDate)}</span>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 bg-gray-900 border border-gray-800 text-gray-300 font-semibold rounded-xl text-xs hover:bg-gray-800 transition cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function TasksPage() {
   const { user } = useSelector((state) => state.auth);
@@ -443,255 +704,6 @@ export default function TasksPage() {
   );
 };
 
-  const TaskFormModal = ({ isOpen, onClose, onSubmit, isEdit = false }) => {
-    if (!isOpen) return null;
-
-    const isMentor = user?.role === 'Mentor';
-
-    return (
-      <div 
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-        onClick={(e) => {
-          // Close modal only if clicking the backdrop, not the modal content
-          if (e.target === e.currentTarget) {
-            onClose();
-          }
-        }}
-      >
-        <div 
-          className="bg-[#0b0e17] border border-gray-800 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex justify-between items-center p-5 border-b border-gray-900 bg-[#0a0e1a]">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              {isEdit ? 'Edit Task' : 'Create Task'}
-            </h3>
-            <button 
-              type="button"
-              onClick={onClose} 
-              className="text-gray-500 hover:text-white p-1 hover:bg-gray-900 rounded-lg transition cursor-pointer"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <form onSubmit={onSubmit} className="p-5 space-y-4 max-h-[75vh] overflow-y-auto scrollbar-thin">
-            {validationError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
-                ⚠️ {validationError}
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <label htmlFor="task-title" className="text-xs text-gray-400 font-semibold">Title *</label>
-              <input
-                id="task-title"
-                type="text"
-                placeholder="Task title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition"
-                required
-                autoFocus
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label htmlFor="task-description" className="text-xs text-gray-400 font-semibold">Description</label>
-              <textarea
-                id="task-description"
-                rows={3}
-                placeholder="Task description (optional)"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition resize-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs text-gray-400 font-semibold">Due Date</label>
-                <input
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                  className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs text-gray-400 font-semibold">Priority</label>
-                <select
-                  value={formData.priority}
-                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                  className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-            </div>
-
-            {!isEdit && isMentor && (
-              <>
-                <div className="space-y-1">
-                  <label className="text-xs text-gray-400 font-semibold">Task Type</label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, source: 'self', assignedTo: '' })}
-                      className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                        formData.source === 'self'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                          : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      Personal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, source: 'mentor' })}
-                      className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                        formData.source === 'mentor'
-                          ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                          : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      Assign to Student
-                    </button>
-                  </div>
-                </div>
-
-                {formData.source === 'mentor' && (
-                  <>
-                    <div className="space-y-1">
-                      <label className="text-xs text-gray-400 font-semibold">Assign To *</label>
-                      <select
-                        value={formData.assignedTo}
-                        onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                        className="w-full bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-                        required
-                      >
-                        <option value="">Select a student</option>
-                        {students.map(student => (
-                          <option key={student._id} value={student._id}>
-                            {student.name} ({student.email})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs text-gray-400 font-semibold">Time Limit (optional)</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          min="1"
-                          placeholder="24"
-                          value={formData.timeLimit}
-                          onChange={(e) => setFormData({ ...formData, timeLimit: e.target.value })}
-                          className="flex-1 bg-[#111625] border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition"
-                        />
-                        <span className="flex items-center px-3 bg-[#111625] border border-gray-800 rounded-xl text-xs text-gray-400">
-                          hours
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-gray-500 mt-1">
-                        Task will expire after this duration from assignment time
-                      </p>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 py-2.5 bg-gray-900 border border-gray-800 text-gray-300 font-semibold rounded-xl text-xs hover:bg-gray-800 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-semibold rounded-xl text-xs transition shadow-lg cursor-pointer"
-              >
-                {isEdit ? 'Update Task' : 'Create Task'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  };
-
-  const TaskViewModal = ({ isOpen, onClose, task }) => {
-    if (!isOpen || !task) return null;
-
-    // Use the enhanced modal for mentor tasks, simple view for self tasks
-    if (task.source === 'mentor') {
-      return null; // Will be replaced by TaskViewModalEnhanced below
-    }
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="bg-[#0b0e17] border border-gray-800 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-          <div className="flex justify-between items-center p-5 border-b border-gray-900 bg-[#0a0e1a]">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Task Details</h3>
-            <button onClick={onClose} className="text-gray-500 hover:text-white p-1 hover:bg-gray-900 rounded-lg transition cursor-pointer">
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="p-5 space-y-4">
-            <div>
-              <h4 className="text-lg font-bold text-white mb-2">{task.title}</h4>
-              {task.description && (
-                <p className="text-sm text-gray-400 leading-relaxed">{task.description}</p>
-              )}
-            </div>
-
-            <div className="space-y-2 pt-2 border-t border-gray-900">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500 font-semibold">Status:</span>
-                <span className={`px-2 py-1 rounded-lg font-semibold border ${
-                  task.status === 'completed' 
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                    : 'bg-gray-500/10 text-gray-400 border-gray-500/20'
-                }`}>
-                  {task.status === 'completed' ? 'Completed' : 'Pending'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500 font-semibold">Priority:</span>
-                <span className={`px-2 py-1 rounded-lg border font-semibold ${getPriorityColor(task.priority)}`}>
-                  {task.priority}
-                </span>
-              </div>
-
-              {task.dueDate && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500 font-semibold">Due Date:</span>
-                  <span className="text-gray-300">{formatDate(task.dueDate)}</span>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={onClose}
-              className="w-full py-2.5 bg-gray-900 border border-gray-800 text-gray-300 font-semibold rounded-xl text-xs hover:bg-gray-800 transition cursor-pointer"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-6 animate-in fade-in duration-500">
@@ -787,6 +799,11 @@ export default function TasksPage() {
         onClose={() => { setCreateModalOpen(false); resetForm(); }} 
         onSubmit={handleCreateTask}
         isEdit={false}
+        formData={formData}
+        setFormData={setFormData}
+        validationError={validationError}
+        students={students}
+        isMentor={user?.role === 'Mentor'}
       />
 
       <TaskFormModal 
@@ -794,6 +811,11 @@ export default function TasksPage() {
         onClose={() => { setEditModalOpen(false); resetForm(); setSelectedTask(null); }} 
         onSubmit={handleEditTask}
         isEdit={true}
+        formData={formData}
+        setFormData={setFormData}
+        validationError={validationError}
+        students={students}
+        isMentor={user?.role === 'Mentor'}
       />
 
       {/* Use simple modal for self tasks, enhanced for mentor tasks */}
@@ -848,8 +870,8 @@ export default function TasksPage() {
           }}
           task={selectedTask}
           submissions={[selectedSubmission]}
-          onApprove={(submissionId, feedback) => handleReviewSubmission('approve')}
-          onReject={(submissionId, feedback) => handleReviewSubmission('reject')}
+          onApprove={() => handleReviewSubmission('approve')}
+          onReject={() => handleReviewSubmission('reject')}
           isLoading={reviewLoading}
           validationError={validationError}
         />

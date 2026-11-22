@@ -16,7 +16,7 @@ import aiRoutes from './routes/aiRoutes.js';
 import taskRoutes from './routes/tasks.js';
 import taskSubmissionRoutes from './routes/taskSubmissions.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { originVerification } from './middleware/csrfProtection.js';
+import { originVerification, getTrustedOrigins } from './middleware/csrfProtection.js';
 import { generalApiLimiter } from './middleware/rateLimiter.js';
 import { mongoSanitizerMiddleware } from './validation/sanitizer.js';
 
@@ -44,7 +44,15 @@ app.use(
 
 app.use(
   cors({
-    origin: frontendUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (such as mobile apps or server-to-server health checks)
+      if (!origin) return callback(null, true);
+      const trustedOrigins = getTrustedOrigins();
+      if (trustedOrigins.has(origin.toLowerCase())) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   })
 );

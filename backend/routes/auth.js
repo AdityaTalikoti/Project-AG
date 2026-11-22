@@ -118,7 +118,7 @@ router.post('/signup', authLimiter, async (req, res) => {
         const { rawToken, durationDays } = await createServerSession(existingUser, req, true);
         const loginCookieOptions = { ...cookieOptions, maxAge: durationDays * 24 * 60 * 60 * 1000 };
         res.cookie('token', rawToken, loginCookieOptions);
-        setCsrfCookie(req, res);
+        setCsrfCookie(req, res, true);
         return res.status(200).json({
           user: { _id: existingUser._id, name: existingUser.name, email: existingUser.email, picture: existingUser.picture },
         });
@@ -142,7 +142,7 @@ router.post('/signup', authLimiter, async (req, res) => {
     const { rawToken, durationDays } = await createServerSession(user, req, true);
     const loginCookieOptions = { ...cookieOptions, maxAge: durationDays * 24 * 60 * 60 * 1000 };
     res.cookie('token', rawToken, loginCookieOptions);
-    setCsrfCookie(req, res);
+    setCsrfCookie(req, res, true);
 
     res.status(201).json({
       user: { _id: user._id, name: user.name, email: user.email, picture: user.picture, phone: user.phone },
@@ -197,7 +197,7 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     res.cookie('token', rawToken, loginCookieOptions);
-    setCsrfCookie(req, res);
+    setCsrfCookie(req, res, true);
     res.json({
       user: { _id: user._id, name: user.name, email: user.email, picture: user.picture, role: user.role },
     });
@@ -367,7 +367,7 @@ router.get('/google/callback', async (req, res) => {
     const { rawToken, durationDays } = await createServerSession(user, req, true);
     const loginCookieOptions = { ...cookieOptions, maxAge: durationDays * 24 * 60 * 60 * 1000 };
     res.cookie('token', rawToken, loginCookieOptions);
-    setCsrfCookie(req, res);
+    setCsrfCookie(req, res, true);
 
     res.redirect(targetFrontendUrl);
 
@@ -450,6 +450,10 @@ router.post('/logout', async (req, res) => {
     clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
   }
   res.clearCookie('token', clearCookieOptions);
+  res.clearCookie('_csrf', {
+    ...clearCookieOptions,
+    httpOnly: false,
+  });
   res.json({ message: 'Logged out' });
 });
 

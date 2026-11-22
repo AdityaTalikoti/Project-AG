@@ -166,6 +166,21 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['Event', 'DashboardStats'],
     }),
+    toggleRoadmapTask: builder.mutation({
+      query: (taskToggleData) => ({
+        url: 'roadmaps/tasks/toggle',
+        method: 'POST',
+        body: taskToggleData,
+      }),
+      invalidatesTags: ['DashboardStats'],
+    }),
+    sendChatMessage: builder.mutation({
+      query: (chatData) => ({
+        url: 'ai/chat',
+        method: 'POST',
+        body: chatData,
+      }),
+    }),
     getStudyPlan: builder.query({
       query: (date) => date ? `ai/study-plan?date=${date}` : 'ai/study-plan',
       providesTags: ['StudyPlan'],
@@ -289,6 +304,8 @@ export const {
   useGenerateRoadmapMutation,
   useAnalyzeSuggestionsMutation,
   useSaveRoadmapMutation,
+  useToggleRoadmapTaskMutation,
+  useSendChatMessageMutation,
 
   // Phase 8 AI Study Planner Hooks
   useGetStudyPlanQuery,

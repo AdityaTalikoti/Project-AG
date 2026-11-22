@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Compass, CheckCircle2, Lock, ArrowLeft, Target, Award, Clock, 
+  Compass, CheckCircle2, Lock, ArrowLeft, Award, Clock, 
   Trash2, Trophy, Calendar, AlertTriangle, Check, Plus, ArrowRight, 
-  Sparkles, ChevronUp, ChevronDown, Save, RefreshCw, X, Eye, BookOpen, 
-  BookMarked, HelpCircle
+  Sparkles, ChevronUp, ChevronDown, Save, RefreshCw, BookOpen, 
+  BookMarked
 } from 'lucide-react';
 import { 
   useGetRoadmapSyncStatusQuery, 
@@ -13,7 +13,8 @@ import {
   useArchiveActiveRoadmapMutation,
   useGenerateRoadmapMutation,
   useAnalyzeSuggestionsMutation,
-  useSaveRoadmapMutation
+  useSaveRoadmapMutation,
+  useToggleRoadmapTaskMutation
 } from '../store/apiSlice';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -33,6 +34,7 @@ export default function RoadmapPage() {
   const [generateRoadmap, { isLoading: isGenerating }] = useGenerateRoadmapMutation();
   const [analyzeSuggestions, { isLoading: isAnalyzingSuggestions }] = useAnalyzeSuggestionsMutation();
   const [saveRoadmap, { isLoading: isSavingRoadmap }] = useSaveRoadmapMutation();
+  const [toggleRoadmapTask] = useToggleRoadmapTaskMutation();
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -142,19 +144,14 @@ export default function RoadmapPage() {
       });
       setRoadmap({ ...roadmap, modules: updatedModules });
 
-      const res = await fetch(`${API_BASE}/api/roadmaps/tasks/toggle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          roadmapId: roadmap._id,
-          taskId,
-          completed: !currentCompleted
-        })
-      });
-      const json = await res.json();
-      if (json.success) {
-        setRoadmap(json.data);
+      const res = await toggleRoadmapTask({
+        roadmapId: roadmap._id,
+        taskId,
+        completed: !currentCompleted
+      }).unwrap();
+
+      if (res.success && res.data) {
+        setRoadmap(res.data);
       } else {
         fetchActiveRoadmap();
       }
@@ -328,8 +325,6 @@ export default function RoadmapPage() {
 
   // STEP 1 — AI Onboarding Interview UI
   if (!roadmap && !generatedRoadmap) {
-    const finalGoal = customGoalOption === 'Custom' ? goal : customGoalOption;
-
     return (
       <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-300">
         <button 
@@ -998,7 +993,7 @@ export default function RoadmapPage() {
           <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-2">Learning Path Modules</h2>
           
           <div className="relative border-l border-gray-900 pl-6 ml-4 space-y-8">
-            {roadmap.modules.map((mod, modIdx) => {
+            {roadmap.modules.map((mod) => {
               const isInProgress = mod.status === 'in-progress';
               const isCompleted = mod.status === 'completed';
               const isLocked = mod.status === 'locked';
