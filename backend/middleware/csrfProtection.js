@@ -132,8 +132,8 @@ export const originVerification = (req, res, next) => {
  * CSRF Token Generator & Cookie Setter helper.
  * Sets double-submit _csrf cookie and returns raw CSRF token.
  */
-export const setCsrfCookie = (req, res) => {
-  let token = req.cookies?._csrf;
+export const setCsrfCookie = (req, res, forceNew = false) => {
+  let token = !forceNew ? req.cookies?._csrf : null;
   if (!token) {
     token = crypto.randomBytes(32).toString('hex');
   }
@@ -142,12 +142,18 @@ export const setCsrfCookie = (req, res) => {
     ? (process.env.COOKIE_DOMAIN ? 'lax' : 'none')
     : 'lax';
 
-  res.cookie('_csrf', token, {
+  const cookieOptions = {
     httpOnly: false, // Non-httpOnly so frontend can read and send in X-CSRF-Token header
     secure: isProduction,
     sameSite: resolvedSameSite,
     path: '/',
     maxAge: 24 * 60 * 60 * 1000,
-  });
+  };
+
+  if (isProduction && process.env.COOKIE_DOMAIN) {
+    cookieOptions.domain = process.env.COOKIE_DOMAIN;
+  }
+
+  res.cookie('_csrf', token, cookieOptions);
   return token;
 };

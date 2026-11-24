@@ -6,6 +6,7 @@ import PasswordInput from '../components/auth/PasswordInput';
 import PhoneInput from '../components/auth/PhoneInput';
 import OtpInput from '../components/auth/OtpInput';
 import GoogleButton from '../components/auth/GoogleButton';
+import { fetchCsrfToken, getCsrfHeaders } from '../services/csrf';
 import './Auth.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -85,9 +86,10 @@ function SignUpView({ onSwitch, initialEmail = '' }) {
     setLoading(true);
     setBanner('');
     try {
+      const headers = await getCsrfHeaders();
       const res = await fetch(`${API_BASE}/api/auth/signup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           name: `${form.first.trim()} ${form.last.trim()}`,
@@ -177,9 +179,10 @@ function SignInView({ onSwitch, onForgot, onNeedPassword }) {
     setLoading(true);
     setBanner('');
     try {
+      const headers = await getCsrfHeaders();
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ email: form.email.trim(), password: form.password, remember: form.remember }),
       });
@@ -249,25 +252,7 @@ function ForgotView({ onBack }) {
     return () => clearInterval(id);
   }, [timer]);
 
-  const getCsrfHeader = async () => {
-    let csrfMatch = document.cookie.match(/(?:^|; )_csrf=([^;]*)/);
-    let csrfToken = csrfMatch && csrfMatch[1] ? decodeURIComponent(csrfMatch[1]) : null;
-    if (!csrfToken) {
-      try {
-        const res = await fetch(`${API_BASE}/api/auth/csrf-token`, { credentials: 'include' });
-        const data = await res.json();
-        csrfToken = data.csrfToken;
-      } catch { /* swallow — CSRF prefetch is best-effort */ }
-    }
-    const headers = {
-      'Content-Type': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
-    };
-    if (csrfToken) {
-      headers['X-CSRF-Token'] = csrfToken;
-    }
-    return headers;
-  };
+  const getCsrfHeader = getCsrfHeaders;
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -447,6 +432,10 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const [view, setView] = useState('signin'); // 'signin' | 'signup' | 'forgot'
   const [prefillEmail, setPrefillEmail] = useState('');
+
+  React.useEffect(() => {
+    fetchCsrfToken();
+  }, []);
 
   React.useEffect(() => {
     if (!loading && isAuthenticated) {

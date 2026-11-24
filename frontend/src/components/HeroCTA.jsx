@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Compass, Target } from 'lucide-react';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
+import { useGenerateRoadmapMutation, useSaveRoadmapMutation } from '../store/apiSlice';
 
 export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) {
   const [goalName, setGoalName] = useState('MERN Stack');
@@ -12,53 +11,43 @@ export default function HeroCTA({ activeRoadmap, hasActiveRoadmap, isLoading }) 
   const [commitment, setCommitment] = useState(60);
   const [generating, setGenerating] = useState(false);
 
+  const [generateRoadmap] = useGenerateRoadmapMutation();
+  const [saveRoadmap] = useSaveRoadmapMutation();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setGenerating(true);
     try {
       const selectedGoal = goalName === 'Custom' ? customGoal : goalName;
-      const res = await fetch(`${API_BASE}/api/roadmaps/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          goal: selectedGoal,
+      const genRes = await generateRoadmap({
+        goal: selectedGoal,
+        skillLevel,
+        timeline,
+        dailyCommitment: commitment
+      }).unwrap();
+
+      if (genRes.success && genRes.data) {
+        const saveRes = await saveRoadmap({
+          title: genRes.data.title,
+          description: genRes.data.description,
           skillLevel,
-          timeline,
-          dailyCommitment: commitment
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.data) {
-          const saveRes = await fetch(`${API_BASE}/api/roadmaps/save`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              title: data.data.title,
-              description: data.data.description,
-              skillLevel,
-              dailyCommitment: commitment,
-              milestones: data.data.milestones,
-              timeline: data.data.estimatedDuration,
-              sync: false
-            })
-          });
-          if (saveRes.ok) {
-            window.location.reload();
-          } else {
-            alert("Failed to save the generated roadmap.");
-          }
+          dailyCommitment: commitment,
+          milestones: genRes.data.milestones,
+          timeline: genRes.data.estimatedDuration,
+          sync: false
+        }).unwrap();
+
+        if (saveRes.success) {
+          window.location.reload();
         } else {
-          alert("Failed to generate roadmap content.");
+          alert("Failed to save the generated roadmap.");
         }
       } else {
-        alert("Failed to generate roadmap.");
+        alert("Failed to generate roadmap content.");
       }
     } catch (err) {
       console.error(err);
-      alert("An error occurred.");
+      alert(err?.data?.message || "Failed to generate roadmap.");
     } finally {
       setGenerating(false);
     }

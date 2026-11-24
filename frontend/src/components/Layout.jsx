@@ -6,7 +6,7 @@ import { useGetDashboardStatsQuery } from '../store/apiSlice';
 import {
   GraduationCap, Home, BookOpen, Compass, CheckSquare, Layers,
   FileText, BarChart2, Settings, LogOut, Search, Bell, Calendar, 
-  Moon, Sun, Menu
+  Moon, Sun, Menu, X
 } from 'lucide-react';
 
 export default function Layout() {
@@ -62,10 +62,6 @@ export default function Layout() {
 
   const stats = statsRes?.data || {};
   const levelInfo = stats.levelInfo || { level: 1, name: "Loading...", xp: 0, maxXp: 1000 };
-  const currentWeekDots = stats.currentWeekDots || [
-    { label: 'M', active: true }, { label: 'T', active: true }, { label: 'W', active: true },
-    { label: 'T', active: true }, { label: 'F', active: false }, { label: 'S', active: false }, { label: 'S', active: false }
-  ];
 
   const handleLogout = async () => {
     await dispatch(logoutUser());

@@ -12,41 +12,38 @@
  * @param {string} message - The student's message.
  * @returns {Promise<{success: boolean, reply?: string, message?: string}>}
  */
+import { getCsrfHeaders } from './csrf.js';
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-export const sendChatMessage = (message) => {
-  return fetch(`${API_BASE}/api/ai/chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify({ message }),
-  })
-    // Chain Step 1: Handle HTTP Response & JSON stream resolution
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP status ${response.status}`);
-      }
-      return response.json();
-    })
-    // Chain Step 2: Validate payload structure and transform data for UI consumption
-    .then((data) => {
-      if (data && typeof data === 'object') {
-        return {
-          success: data.success !== false,
-          reply: data.reply || data.message || '',
-          ...data,
-        };
-      }
-      throw new Error('Invalid JSON payload structure received from AI mentor service');
-    })
-    // Chain Step 3: Centralized Error Handling catching network errors, HTTP status errors, or JSON parse failures
-    .catch((error) => {
-      console.error('API Error in sendChatMessage:', error);
-      return {
-        success: false,
-        message: 'Unable to contact ScholarSync AI Mentor. Please try again.',
-      };
+export const sendChatMessage = async (message) => {
+  try {
+    const headers = await getCsrfHeaders();
+    const response = await fetch(`${API_BASE}/api/ai/chat`, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify({ message }),
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP status ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data && typeof data === 'object') {
+      return {
+        success: data.success !== false,
+        reply: data.reply || data.message || '',
+        ...data,
+      };
+    }
+    throw new Error('Invalid JSON payload structure received from AI mentor service');
+  } catch (error) {
+    console.error('API Error in sendChatMessage:', error);
+    return {
+      success: false,
+      message: 'Unable to contact ScholarSync AI Mentor. Please try again.',
+    };
+  }
 };
